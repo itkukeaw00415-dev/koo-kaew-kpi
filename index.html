@@ -1,0 +1,2490 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบประเมินผล KPI คปสอ.กู่แก้ว ปีงบประมาณ 2569</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome สำหรับไอคอนสวยงาม -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Font: Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Sarabun', sans-serif;
+    }
+    /* ปรับแต่ง Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background-color: white !important;
+        font-size: 12px;
+      }
+      .print-card {
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: none !important;
+        margin-bottom: 1.5rem;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="bg-gradient-to-r from-emerald-700 via-teal-800 to-cyan-900 text-white shadow-md no-print sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-white/10 p-2.5 rounded-xl border border-white/20">
+          <i class="fa-solid fa-chart-line text-2xl text-emerald-300"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">ระบบประเมินผลประสิทธิภาพการทำงาน KPI</h1>
+          <p class="text-xs text-teal-100 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            คปสอ.กู่แก้ว จ.อุดรธานี • ปีงบประมาณ 2569 (ตารางร่วมรายหน่วยงาน)
+          </p>
+        </div>
+      </div>
+      
+      <!-- GAS API Connection Settings & Quick User Selection (Simulated Login) -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- GAS URL Input Toggle -->
+        <div class="relative" id="apiUrlWrapper">
+          <button onclick="toggleApiModal()" class="bg-white/10 hover:bg-white/20 text-xs px-3 py-2 rounded-lg border border-white/10 flex items-center gap-1.5 transition-all">
+            <i class="fa-solid fa-database text-amber-300"></i>
+            <span>ตั้งค่า Google Sheets API</span>
+          </button>
+        </div>
+
+        <!-- Simulated Login User Select -->
+        <div class="flex items-center bg-slate-900/40 rounded-lg px-2 py-1 border border-white/10">
+          <span class="text-[11px] text-teal-200 mr-2 font-medium"><i class="fa-solid fa-user-lock mr-1 text-emerald-300"></i>สวมบทผู้ใช้งาน:</span>
+          <select id="userLoginSelect" onchange="handleUserLoginChange(this.value)" class="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer pr-1 max-w-[200px]">
+            <!-- เติมชื่อพนักงานรายบุคคลจาก staffData ผ่าน JS -->
+          </select>
+        </div>
+        
+        <!-- Live Indicator -->
+        <div id="connStatus" class="bg-blue-600/30 text-blue-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-blue-500/20 flex items-center gap-1.5">
+          <i class="fa-solid fa-cloud"></i>
+          <span>In-Memory Sandbox</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="bg-white border-b border-slate-200 shadow-sm no-print sticky top-[73px] md:top-[61px] z-40">
+    <div class="max-w-7xl mx-auto px-4 overflow-x-auto">
+      <div class="flex space-x-1 py-2 min-w-[650px]" id="navigationTabs">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-tab active flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg text-emerald-700 bg-emerald-50 transition-all border-b-2 border-emerald-600">
+          <i class="fa-solid fa-table-columns text-base"></i> แดชบอร์ดภาพรวม
+        </button>
+        <button onclick="switchTab('evaluation')" id="tab-evaluation" class="nav-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-slate-50 transition-all">
+          <i class="fa-solid fa-square-poll-vertical text-base"></i> บันทึกผลงานรายแห่ง
+        </button>
+        <button onclick="switchTab('matrix')" id="tab-matrix" class="nav-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-slate-50 transition-all">
+          <i class="fa-solid fa-border-all text-base"></i> ตารางเปรียบเทียบ (Matrix)
+        </button>
+        <button onclick="switchTab('kpi-mgmt')" id="tab-kpi-mgmt" class="nav-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-slate-50 transition-all">
+          <i class="fa-solid fa-gear text-base"></i> จัดการตัวชี้วัดหลัก
+        </button>
+        <button onclick="switchTab('staff-mgmt')" id="tab-staff-mgmt" class="nav-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-slate-50 transition-all">
+          <i class="fa-solid fa-users text-base"></i> ทะเบียนหน่วยงาน & บุคลากร
+        </button>
+        <button onclick="switchTab('reports')" id="tab-reports" class="nav-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:text-emerald-700 hover:bg-slate-50 transition-all">
+          <i class="fa-solid fa-file-invoice text-base"></i> รายงาน & ประเมินรับรอง
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 flex flex-col gap-6">
+
+    <!-- ALERTS / NOTIFICATIONS CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-md no-print"></div>
+
+    <!-- MAIN SCOPE FILTER BAR -->
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
+      <div class="flex items-center gap-2.5">
+        <div class="bg-emerald-100 p-2 rounded-lg text-emerald-800">
+          <i class="fa-solid fa-filter"></i>
+        </div>
+        <div>
+          <h2 class="font-bold text-slate-800 text-sm">ตัวกรองพิจารณาระดับขอบเขตข้อมูล (Dynamic Scope)</h2>
+          <p class="text-xs text-slate-500">จำกัดสิทธิ์ข้อมูลอัตโนมัติตามสังกัดหน่วยงานของบัญชีที่ใช้งานจริง</p>
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <!-- Hospital Filter -->
+        <div class="flex flex-col w-full sm:w-56">
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">ระดับหน่วยบริการ/รพ.สต.</label>
+          <select id="scopeHospital" onchange="handleScopeChange()" class="bg-slate-100 text-slate-800 text-xs font-semibold rounded-lg p-2.5 border border-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
+            <option value="ALL">-- คปสอ.กู่แก้ว (ทั้งหมด) --</option>
+            <!-- จะเพิ่มรายการหน่วยงานผ่าน JavaScript อัตโนมัติ -->
+          </select>
+        </div>
+
+        <!-- Staff Filter -->
+        <div class="flex flex-col w-full sm:w-56">
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">รายชื่อผู้รับผิดชอบประเมิน</label>
+          <select id="scopeStaff" onchange="handleScopeChange()" class="bg-slate-100 text-slate-800 text-xs font-semibold rounded-lg p-2.5 border border-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
+            <option value="ALL">-- บุคลากรทุกคน --</option>
+            <!-- ดึงรายชื่อจากตารางเจ้าหน้าที่เข้ามาอัตโนมัติ -->
+          </select>
+        </div>
+        
+        <!-- Clear Filter Btn -->
+        <button id="clearFilterBtn" onclick="clearScopeFilter()" class="h-10 mt-5 bg-slate-200 hover:bg-slate-300 text-slate-700 px-3.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="fa-solid fa-rotate-left"></i> ล้าง
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Filter Info Alert -->
+    <div id="filterAlert" class="hidden bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center justify-between text-amber-800 text-xs no-print">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-base text-amber-600"></i>
+        <span>ขณะนี้ท่านกำลังเปิดดูเฉพาะข้อมูลกรอง: <strong id="filterAlertText"></strong> ซึ่งบางเมนูจะสอดคล้องตามบทบาทและแสดงผลเฉพาะรายการที่เป็นของ รพ.สต. หรือบุคคลดังกล่าว</span>
+      </div>
+      <button id="alertClearBtn" onclick="clearScopeFilter()" class="underline font-bold text-amber-900">ล้างตัวกรองกลับสู่ คปสอ. ทั้งหมด</button>
+    </div>
+
+    <!-- Security Restrict Banner for รพ.สต. -->
+    <div id="securityRestrictBanner" class="hidden bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-center gap-3 text-blue-800 text-xs no-print shadow-sm">
+      <div class="bg-blue-600 text-white p-2 rounded-lg text-base">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <h4 class="font-bold text-sm">การแยกสิทธิ์ข้อมูล (Data Segregation Active)</h4>
+        <p class="text-blue-600/90 mt-0.5">ระบบตรวจพบว่าท่านอยู่ในระดับหน่วยปฏิบัติงานทั่วไป ท่านจะสามารถเข้าถึงและประเมินผลได้เฉพาะตัวชี้วัดภายในสังกัดของท่าน และแท็บโครงสร้างภาพรวม คปสอ. บางส่วนจะถูกจำกัดสิทธิ์การเข้าถึงเพื่อความปลอดภัยของข้อมูล</p>
+      </div>
+    </div>
+
+    <!-- ==============================================
+         TAB 1: DASHBOARD
+         ============================================== -->
+    <section id="pane-dashboard" class="tab-pane flex flex-col gap-6">
+      
+      <!-- Key Stats Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- 1. Total core kpis -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 font-medium">จำนวนตัวชี้วัดหลักทั้งหมด</span>
+            <h3 id="statTotalKpis" class="text-3xl font-extrabold text-slate-900 mt-1">0</h3>
+            <span class="text-[10px] text-emerald-600 mt-2 block"><i class="fa-solid fa-arrows-to-dot"></i> มอบหมายทำร่วมกันทุกหน่วยงาน</span>
+          </div>
+          <div class="bg-emerald-50 text-emerald-700 w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+            <i class="fa-solid fa-folder-tree"></i>
+          </div>
+        </div>
+
+        <!-- 2. Passed KPIs in scope -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 font-medium">ตัวชี้วัดที่ประเมินผ่านเกณฑ์</span>
+            <h3 id="statPassedKpis" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+            <span id="statPassedSub" class="text-[10px] text-slate-400 mt-2 block">คิดเป็น 0.00% ของตัวชี้วัดทั้งหมด</span>
+          </div>
+          <div class="bg-emerald-50 text-emerald-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+
+        <!-- 3. Failed KPIs in scope -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 font-medium">ตัวชี้วัดที่ไม่ผ่านเกณฑ์</span>
+            <h3 id="statFailedKpis" class="text-3xl font-extrabold text-rose-500 mt-1">0</h3>
+            <span id="statFailedSub" class="text-[10px] text-slate-400 mt-2 block">คิดเป็น 0.00% ของทั้งหมด</span>
+          </div>
+          <div class="bg-rose-50 text-rose-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </div>
+        </div>
+
+        <!-- 4. Average Score (Calculated with weights) -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 font-medium">คะแนนร้อยละความสำเร็จเฉลี่ย</span>
+            <h3 id="statAvgScore" class="text-3xl font-extrabold text-cyan-700 mt-1">0.0%</h3>
+            <span class="text-[10px] text-cyan-600 mt-2 block" id="statAvgScoreSub">จากน้ำหนักคะแนนเต็มของกลุ่ม</span>
+          </div>
+          <div class="bg-cyan-50 text-cyan-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+            <i class="fa-solid fa-award"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graph & Progress Ring Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- SVG Interactive Strategy Chart -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">แผนภูมิอัตราความสำเร็จเฉลี่ยตามยุทธศาสตร์</h3>
+              <p class="text-xs text-slate-400">เปรียบเทียบร้อยละผลการดำเนินงานเฉลี่ยใน 3 ยุทธศาสตร์หลัก</p>
+            </div>
+            <span class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold">อัตราส่วน (%)</span>
+          </div>
+          
+          <!-- Custom SVG Bar Graph -->
+          <div class="p-4 bg-slate-50 rounded-xl" id="svgChartContainer">
+            <div id="strategyBarChart" class="w-full h-56 flex items-center justify-center">
+               <!-- แผนภูมิแบบแท่ง SVG จะประกอบขึ้นด้วย javascript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Ring & Breakdown -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="font-bold text-slate-800 text-sm mb-1">ภาพรวมความก้าวหน้าการดำเนินงาน</h3>
+            <p class="text-xs text-slate-400 mb-6">อัตราความสำเร็จบรรลุเป้าหมายเฉลี่ยรวม</p>
+          </div>
+
+          <div class="flex justify-center items-center relative mb-6">
+            <!-- SVG Progress Ring -->
+            <svg class="w-40 h-40 transform -rotate-90">
+              <circle cx="80" cy="80" r="70" class="stroke-slate-100" stroke-width="12" fill="transparent"></circle>
+              <circle cx="80" cy="80" r="70" id="progressRingCircle" class="stroke-emerald-500 transition-all duration-1000" stroke-width="12" fill="transparent" stroke-dasharray="440" stroke-dashoffset="440" stroke-linecap="round"></circle>
+            </svg>
+            <div class="absolute text-center">
+              <span id="progressText" class="text-3xl font-extrabold text-slate-800">0.0%</span>
+              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">สำเร็จบรรลุเป้า</p>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-500 flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-emerald-500 rounded-full inline-block"></span>ผ่านเกณฑ์เป้าหมาย</span>
+              <span id="progressLegendPassed" class="font-bold text-slate-700">0 รายการ</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-500 flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-rose-500 rounded-full inline-block"></span>ตกเกณฑ์ประเมิน</span>
+              <span id="progressLegendFailed" class="font-bold text-slate-700">0 รายการ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ranking Section -->
+      <div id="rankingGridSection" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 1. Hospital Ranking -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">การจัดอันดับผลสัมฤทธิ์ KPI รายหน่วยบริการ</h3>
+              <p class="text-xs text-slate-400">คำนวณจากร้อยละเฉลี่ยของคะแนน KPI รวมของหน่วยบริการในสังกัด</p>
+            </div>
+            <i class="fa-solid fa-trophy text-amber-500 text-lg"></i>
+          </div>
+
+          <div class="divide-y divide-slate-100 overflow-y-auto max-h-[300px]" id="hospitalRankList">
+            <!-- เติมรายการโดย JS -->
+          </div>
+        </div>
+
+        <!-- 2. Staff Ranking -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">อันดับเจ้าหน้าที่ผู้ขับเคลื่อนผลงานดีเด่น</h3>
+              <p class="text-xs text-slate-400">พิจารณาจากผลคะแนนเฉลี่ยตัวชี้วัดที่รับผิดชอบร่วมประเมิน</p>
+            </div>
+            <i class="fa-solid fa-medal text-cyan-600 text-lg"></i>
+          </div>
+
+          <div class="divide-y divide-slate-100 overflow-y-auto max-h-[300px]" id="staffRankList">
+            <!-- เติมรายการโดย JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-time KPI Status Table -->
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+          <div>
+            <h3 class="font-bold text-slate-800 text-sm" id="dashboardTableTitle">สรุปสถานการณ์ตัวชี้วัดปี 2569 รายข้อ</h3>
+            <p class="text-xs text-slate-400" id="dashboardTableSubTitle">หน่วยบริการทั้งหมดใช้ร่วมประเมิน ผลการดำเนินงานสรุปในภาพรวมปัจจุบัน</p>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="kpiSearch" oninput="renderDashboardTable()" placeholder="ค้นหาตัวชี้วัดหรือยุทธศาสตร์..." class="w-full text-xs pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200">
+                <th class="py-3 px-4 w-20">รหัส</th>
+                <th class="py-3 px-4">ชื่อตัวชี้วัด</th>
+                <th class="py-3 px-4 w-40">เป้าหมายเขต (%)</th>
+                <th class="py-3 px-4 w-44" id="tableHeaderResult">ผลงานเฉลี่ย คปสอ.</th>
+                <th class="py-3 px-4 w-24 text-center">ผ่านเกณฑ์</th>
+                <th class="py-3 px-4 w-32 text-right">น้ำหนักรวม</th>
+              </tr>
+            </thead>
+            <tbody id="dashboardKpiTableBody" class="text-xs divide-y divide-slate-100">
+              <!-- แสดงผลไดนามิกผ่าน JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==============================================
+         TAB 2: EVALUATION (บันทึกผลงานรายแห่ง)
+         ============================================== -->
+    <section id="pane-evaluation" class="tab-pane hidden flex flex-col gap-4">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4 mb-4">
+          <div>
+            <h3 class="font-bold text-slate-800 text-sm">บันทึกผลงานตัวชี้วัด รายหน่วยบริการ</h3>
+            <p class="text-xs text-slate-400">กรอกข้อมูลตัวตั้ง ตัวหาร เพื่อประเมินคะแนนสำหรับแต่ละแห่ง โดยใช้เป้าหมายร่วมกัน</p>
+          </div>
+          
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold text-slate-500">เลือกหน่วยงานที่บันทึก:</span>
+            <select id="evalHospitalSelect" onchange="loadEvalList()" class="bg-slate-100 text-slate-800 text-xs font-bold rounded-lg px-3 py-2 border border-slate-200 cursor-pointer disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
+              <!-- รายชื่อหน่วยงานแบบไดนามิก -->
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200">
+                <th class="py-3 px-4 w-28">รหัส KPI</th>
+                <th class="py-3 px-4">ชื่อตัวชี้วัด & รายละเอียดเป้าหมาย</th>
+                <th class="py-3 px-4 w-28 text-center">เป้าหมาย (%)</th>
+                <th class="py-3 px-4 w-32 text-center">ตัวตั้ง (ผลงาน)</th>
+                <th class="py-3 px-4 w-32 text-center">ตัวหาร (เป้าหมาย)</th>
+                <th class="py-3 px-4 w-32 text-center">ร้อยละผลงาน</th>
+                <th class="py-3 px-4 w-28 text-center">สถานะ</th>
+                <th class="py-3 px-4 w-24 text-right">ดำเนินการ</th>
+              </tr>
+            </thead>
+            <tbody id="evaluationTableBody" class="text-xs divide-y divide-slate-100">
+              <!-- แสดงผลผ่าน JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         TAB 3: MATRIX COMPARISON
+         ============================================== -->
+    <section id="pane-matrix" class="tab-pane hidden flex flex-col gap-4">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div class="mb-4">
+          <h3 class="font-bold text-slate-800 text-sm">ตารางเปรียบเทียบ KPI Matrix รายหน่วยบริการ</h3>
+          <p class="text-xs text-slate-400">เปรียบเทียบภาพรวมผลสัมฤทธิ์ตัวชี้วัดทุกข้อของหน่วยบริการในเครือข่าย คปสอ.กู่แก้ว</p>
+        </div>
+
+        <!-- Matrix Access Restriction Guard -->
+        <div id="matrixAccessRestricted" class="hidden py-12 text-center">
+          <div class="text-slate-300 text-5xl mb-4">
+            <i class="fa-solid fa-lock-open animate-bounce"></i>
+          </div>
+          <h4 class="font-bold text-slate-800 text-sm">แท็บตารางเปรียบเทียบถูกจำกัดขอบเขตข้อมูล</h4>
+          <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">ตามนโยบาย Data Segregation ผู้ปฏิบัติงานระดับหน่วยบริการจะมองเห็นเฉพาะข้อมูลตนเองเท่านั้น แท็บเปรียบเทียบระหว่าง รพ.สต. เปิดให้เข้าดูได้เฉพาะ Admin และผู้บริหาร คปสอ.กู่แก้ว เท่านั้น</p>
+        </div>
+
+        <div class="overflow-x-auto" id="matrixContent">
+          <table class="w-full border border-slate-200 text-xs text-left border-collapse rounded-lg overflow-hidden" id="matrixTable">
+            <!-- ตารางเปรียบเทียบจะถูกสร้างแบบไดนามิกขึ้นอยู่กับจำนวนหน่วยงานจริงที่มี -->
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         TAB 4: KPI MANAGEMENT (จัดการตัวชี้วัดหลัก)
+         ============================================== -->
+    <section id="pane-kpi-mgmt" class="tab-pane hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- ฟอร์มสร้าง/แก้ไขตัวชี้วัดหลัก -->
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm h-fit">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="bg-emerald-100 text-emerald-800 p-2 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></span>
+          <h3 id="kpiFormTitle" class="font-bold text-slate-800 text-sm">เพิ่ม / แก้ไข ตัวชี้วัดหลัก</h3>
+        </div>
+        
+        <form id="kpiForm" onsubmit="handleKpiSubmit(event)" class="space-y-4 text-xs">
+          <input type="hidden" id="kpiFormId">
+          
+          <div>
+            <label class="block text-slate-500 font-bold mb-1">ชื่อตัวชี้วัดหลัก (KPI Name) *</label>
+            <textarea id="kpiFormName" rows="3" required placeholder="เช่น ร้อยละของประชากรกลุ่มเป้าหมายได้รับวัคซีน..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-slate-500 font-bold mb-1">แผนยุทธศาสตร์ที่เกี่ยวข้อง *</label>
+            <select id="kpiFormStrategy" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+              <option value="ยุทธศาสตร์ที่ 1: การส่งเสริมสุขภาพและป้องกันโรค">ยุทธศาสตร์ที่ 1: การส่งเสริมสุขภาพและป้องกันโรค</option>
+              <option value="ยุทธศาสตร์ที่ 2: การพัฒนาบริการและการส่งต่อ">ยุทธศาสตร์ที่ 2: การพัฒนาบริการและการส่งต่อ</option>
+              <option value="ยุทธศาสตร์ที่ 3: การพัฒนาระบบบริหารจัดการ">ยุทธศาสตร์ที่ 3: การพัฒนาระบบบริหารจัดการ</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-500 font-bold mb-1">เป้าหมายร่วม (%) *</label>
+              <input type="number" step="0.01" id="kpiFormTarget" required placeholder="เช่น 80" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <div>
+              <label class="block text-slate-500 font-bold mb-1">น้ำหนักคะแนนเต็ม *</label>
+              <input type="number" step="0.5" id="kpiFormWeight" required placeholder="เช่น 15" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-500 font-bold mb-1">คำอธิบายตัวตั้ง (Numerator) *</label>
+            <input type="text" id="kpiFormNum" required placeholder="เช่น จำนวนประชากรที่ได้รับการคัดกรองเบาหวาน" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-slate-500 font-bold mb-1">คำอธิบายตัวหาร (Denominator) *</label>
+            <input type="text" id="kpiFormDen" required placeholder="เช่น จำนวนประชากรกลุ่มเป้าหมายทั้งหมด" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg transition-all text-center">
+              <i class="fa-solid fa-floppy-disk mr-1.5"></i> บันทึกข้อมูล
+            </button>
+            <button type="button" onclick="resetKpiForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-lg transition-all text-center">
+              ยกเลิก
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- รายการแสดงและลบ แก้ไข ตัวชี้วัดหลักที่มีทั้งหมด -->
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+        <div class="mb-4">
+          <h3 class="font-bold text-slate-800 text-sm">รายการตัวชี้วัดหลัก คปสอ.กู่แก้ว</h3>
+          <p class="text-xs text-slate-400">หมายเหตุ: การเพิ่มหรือแก้ไขข้อมูลที่นี่ จะถูกกระจายไปให้ทุกหน่วยงานในสังกัดดำเนินการร่วมกันแบบอัตโนมัติ</p>
+        </div>
+
+        <div class="overflow-y-auto max-h-[500px]">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase">
+                <th class="py-3 px-3 w-16">รหัส</th>
+                <th class="py-3 px-3">ชื่อตัวชี้วัดหลัก / ยุทธศาสตร์</th>
+                <th class="py-3 px-3 w-20 text-center">เป้าหมาย</th>
+                <th class="py-3 px-3 w-20 text-center">น้ำหนัก</th>
+                <th class="py-3 px-3 w-24 text-right">การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="kpiListTableBody" class="divide-y divide-slate-100">
+              <!-- ข้อมูลตัวชี้วัดหลักผ่าน JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         TAB 5: HOSPITALS & EMPLOYEES MANAGEMENT
+         ============================================== -->
+    <section id="pane-staff-mgmt" class="tab-pane hidden flex flex-col gap-6">
+      
+      <!-- ส่วนที่ 1: การจัดการรายชื่อหน่วยงาน / รพ.สต. -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- ฟอร์มเพิ่ม/แก้ไขหน่วยงาน -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm h-fit">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="bg-teal-100 text-teal-800 p-2 rounded-lg text-xs"><i class="fa-solid fa-hospital"></i></span>
+            <h3 id="hospitalFormTitle" class="font-bold text-slate-800 text-sm">เพิ่ม / แก้ไข หน่วยงาน</h3>
+          </div>
+          
+          <form id="hospitalForm" onsubmit="handleHospitalSubmit(event)" class="space-y-4 text-xs">
+            <input type="hidden" id="hospitalOldName"> <!-- ใช้เก็บชื่อเดิมกรณีกรณีแก้ไขคีย์ -->
+            
+            <div>
+              <label class="block text-slate-500 font-bold mb-1">ชื่อหน่วยงาน / รพ.สต. *</label>
+              <input type="text" id="hospitalNameInput" required placeholder="เช่น รพ.สต.บ้านจีต, รพ.สต.ใหม่" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div class="flex gap-2 pt-2">
+              <button type="submit" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-4 rounded-lg transition-all text-center">
+                <i class="fa-solid fa-floppy-disk mr-1.5"></i> บันทึกหน่วยงาน
+              </button>
+              <button type="button" onclick="resetHospitalForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-lg transition-all text-center">
+                ยกเลิก
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- รายชื่อหน่วยงานที่มีในระบบ -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div class="mb-4">
+            <h3 class="font-bold text-slate-800 text-sm">สารบบข้อมูลหน่วยงานในเครือ คปสอ.กู่แก้ว</h3>
+            <p class="text-xs text-slate-400">หน่วยงานและ รพ.สต. ที่อยู่ในความดูแลและรับประเมินผลงาน KPI</p>
+          </div>
+
+          <div class="overflow-y-auto max-h-[300px]">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase">
+                  <th class="py-3 px-3">ลำดับ</th>
+                  <th class="py-3 px-3">ชื่อหน่วยงาน / รพ.สต.</th>
+                  <th class="py-3 px-3 text-center">จำนวนเจ้าหน้าที่ในสังกัด</th>
+                  <th class="py-3 px-3 text-center">จำนวน KPI ที่ผูกมัด</th>
+                  <th class="py-3 px-3 w-24 text-right">การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="hospitalListTableBody" class="divide-y divide-slate-100">
+                <!-- ข้อมูลหน่วยงานผ่าน JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-200">
+
+      <!-- ส่วนที่ 2: การจัดการรายชื่อบุคลากร -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- ฟอร์มสร้าง/แก้ไขรายชื่อบุคลากร -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm h-fit">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="bg-emerald-100 text-emerald-800 p-2 rounded-lg text-xs"><i class="fa-solid fa-user-plus"></i></span>
+            <h3 id="staffFormTitle" class="font-bold text-slate-800 text-sm">บันทึกประวัติ / ลงทะเบียนบุคลากร</h3>
+          </div>
+          
+          <form id="staffForm" onsubmit="handleStaffSubmit(event)" class="space-y-4 text-xs">
+            <input type="hidden" id="staffFormId">
+            
+            <div>
+              <label class="block text-slate-500 font-bold mb-1">ชื่อ-นามสกุล *</label>
+              <input type="text" id="staffFormName" required placeholder="เช่น นายประดิษฐ์ คบดี" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div>
+              <label class="block text-slate-500 font-bold mb-1">หน่วยบริการที่สังกัด *</label>
+              <select id="staffFormHosp" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                <!-- รายชื่อหน่วยงานดึงจากตัวแปร HOSPITALS โดยอัตโนมัติ -->
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-500 font-bold mb-1">ตำแหน่งหน้าที่ราชการ *</label>
+              <input type="text" id="staffFormPos" required placeholder="เช่น ผู้อำนวยการ รพ.สต., พยาบาลวิชาชีพ" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-500 font-bold mb-1">สิทธิ์การประเมิน *</label>
+                <select id="staffFormRole" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                  <option value="Admin">Admin</option>
+                  <option value="สาธารณสุขอำเภอ">สสอ.</option>
+                  <option value="ผอ.รพ.สต.">ผอ.รพ.สต.</option>
+                  <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-500 font-bold mb-1">อีเมลติดต่อ (moph)</label>
+                <input type="email" id="staffFormEmail" placeholder="name@moph.go.th" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500">
+              </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+              <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg transition-all text-center">
+                <i class="fa-solid fa-floppy-disk mr-1.5"></i> บันทึกบุคลากร
+              </button>
+              <button type="button" onclick="resetStaffForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-lg transition-all text-center">
+                ยกเลิก
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ตารางรายชื่อบุคลากร -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div class="mb-4">
+            <h3 class="font-bold text-slate-800 text-sm">สารบบข้อมูลเจ้าหน้าที่ คปสอ.กู่แก้ว</h3>
+            <p class="text-xs text-slate-400">รายชื่อบุคลากรผู้รับผิดชอบการดำเนินงานและมีบทบาทในการบันทึกยืนยันข้อมูล</p>
+          </div>
+
+          <div class="overflow-y-auto max-h-[500px]">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase">
+                  <th class="py-3 px-3 w-16">รหัส</th>
+                  <th class="py-3 px-3">ชื่อ-นามสกุล / ตำแหน่ง</th>
+                  <th class="py-3 px-3">สังกัดหน่วยบริการ</th>
+                  <th class="py-3 px-3 w-28 text-center">สิทธิ์ระดับบทบาท</th>
+                  <th class="py-3 px-3 w-24 text-right">การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="staffListTableBody" class="divide-y divide-slate-100">
+                <!-- ข้อมูลบุคลากรผ่าน JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         TAB 6: REPORTS & CERTIFICATION
+         ============================================== -->
+    <section id="pane-reports" class="tab-pane hidden flex flex-col gap-6">
+      
+      <!-- การควบคุมรายงาน -->
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
+        <div>
+          <h3 class="font-bold text-slate-800 text-sm">การสกัดข้อมูลรายงานและรับรองผลประเมิน</h3>
+          <p class="text-xs text-slate-400">เลือกพิมพ์เอกสารรับรองระดับหน่วยงานหรือส่งออกในรูปแบบไฟล์สำหรับเปิดใน Microsoft Excel</p>
+        </div>
+        
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Print report -->
+          <button onclick="printReport()" class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> พิมพ์ / บันทึกเป็น PDF
+          </button>
+          
+          <!-- Excel CSV Export -->
+          <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-file-excel"></i> ส่งออกไฟล์ Excel (.CSV)
+          </button>
+        </div>
+      </div>
+
+      <!-- แบบรายงานรับรองอย่างเป็นทางการ (Printable Area) -->
+      <div class="bg-white p-8 rounded-xl border border-slate-200 shadow-sm print-card max-w-4xl mx-auto w-full flex flex-col gap-6" id="printableReportCard">
+        <!-- หัวเอกสารราชการ -->
+        <div class="text-center flex flex-col items-center">
+          <i class="fa-solid fa-file-shield text-slate-400 text-4xl mb-2 no-print"></i>
+          <h2 class="font-bold text-slate-900 text-base">รายงานผลสัมฤทธิ์ตัวชี้วัดประสิทธิภาพ (KPI Assessment Report)</h2>
+          <p class="text-sm text-slate-800 mt-1">เครือข่ายบริการสุขภาพอำเภอกู่แก้ว (คปสอ.กู่แก้ว) ประจำปีงบประมาณ 2569</p>
+          <div class="w-24 h-0.5 bg-slate-300 my-3"></div>
+          <p class="text-xs text-slate-600">หน่วยรับประเมิน: <span id="reportSelectedUnit" class="font-bold text-slate-900">คปสอ.กู่แก้ว (ภาพรวมทั้งหมด)</span></p>
+        </div>
+
+        <!-- รายละเอียดสถิติสรุปแบบทางการ -->
+        <div class="grid grid-cols-3 gap-4 border border-slate-200 p-4 rounded-lg bg-slate-50">
+          <div class="text-center">
+            <span class="text-[10px] text-slate-500 uppercase font-bold">จำนวน KPI ทั้งหมด</span>
+            <p id="reportTotalKpis" class="text-xl font-extrabold text-slate-900 mt-1">0</p>
+          </div>
+          <div class="text-center border-x border-slate-200">
+            <span class="text-[10px] text-slate-500 uppercase font-bold">ผ่านการประเมิน (ข้อ)</span>
+            <p id="reportPassedKpis" class="text-xl font-extrabold text-emerald-600 mt-1">0</p>
+          </div>
+          <div class="text-center">
+            <span class="text-[10px] text-slate-500 uppercase font-bold">ร้อยละผลสัมฤทธิ์เฉลี่ย</span>
+            <p id="reportAvgScore" class="text-xl font-extrabold text-cyan-700 mt-1">0.0%</p>
+          </div>
+        </div>
+
+        <!-- ตารางสรุปรายละเอียด -->
+        <div>
+          <table class="w-full text-left border border-slate-200 text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 font-bold text-slate-700">
+                <th class="py-2.5 px-3 border-r border-slate-200 w-16">รหัส KPI</th>
+                <th class="py-2.5 px-3 border-r border-slate-200">ข้อกำหนดเกณฑ์การประเมิน</th>
+                <th class="py-2.5 px-3 border-r border-slate-200 text-center w-20">เป้าหมายร่วม</th>
+                <th class="py-2.5 px-3 border-r border-slate-200 text-center w-28">ผลงานจริง</th>
+                <th class="py-2.5 px-3 text-center w-20">ประเมิน</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableRows" class="divide-y divide-slate-100">
+              <!-- แถวตัวชี้วัดผ่าน JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- พื้นที่ลงนามผู้รับรองอย่างเป็นทางการ -->
+        <div class="grid grid-cols-2 gap-8 pt-8 mt-6">
+          <div class="text-center flex flex-col items-center">
+            <p class="text-xs text-slate-600 mb-14">ลงชื่อ............................................................<br>(ผู้รับผิดชอบรายงานสรุป)</p>
+            <p class="text-xs font-semibold text-slate-800">ตำแหน่ง..........................................................</p>
+            <p class="text-[10px] text-slate-500 mt-1">วันที่........../................/................</p>
+          </div>
+          
+          <div class="text-center flex flex-col items-center">
+            <p class="text-xs text-slate-600 mb-14">ลงชื่อ............................................................<br>(ผู้มีอำนาจประเมินและรับรองผล)</p>
+            <p class="text-xs font-semibold text-slate-800">ตำแหน่ง สาธารณสุพอำเภอกู่แก้ว / ผู้อำนวยการ</p>
+            <p class="text-[10px] text-slate-500 mt-1">วันที่........../................/................</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 no-print">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <p class="text-xs text-slate-500">© 2026 คปสอ.กู่แก้ว จ.อุดรธานี • พัฒนาโดยใช้เทคโนโลยี Web HTML5, Tailwind CSS และ Google Workspace Database</p>
+      <p class="text-[11px] text-slate-400 mt-1">ระบบถูกออกแบบเพื่อรองรับการตรวจราชการและประเมินผลการจัดบริการในระดับปฐมภูมิ</p>
+    </div>
+  </footer>
+
+  <!-- ==============================================
+       MODALS & DIALOGS
+       ============================================== -->
+       
+  <!-- 1. Google Apps Script Configuration Modal -->
+  <div id="apiConfigModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 hidden no-print">
+    <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden">
+      <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+        <h3 class="font-bold text-sm flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-amber-400"></i>
+          เชื่อมโยงระบบฐานข้อมูล Google Sheets
+        </h3>
+        <button onclick="toggleApiModal()" class="text-slate-300 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="p-5 text-xs space-y-4">
+        <p class="text-slate-600 leading-relaxed">
+          หากท่านได้นำโค้ด Apps Script ไปสร้าง Web App ใน Google Sheets เรียบร้อยแล้ว กรุณานำ **URL ของเว็บแอป (Web App URL)** มาวางด้านล่าง เพื่อให้แอปพลิเคชันใช้งานร่วมกันหลายผู้ใช้ได้แบบ Real-time
+        </p>
+        
+        <div>
+          <label class="block text-slate-700 font-bold mb-1">Web App Deployment URL:</label>
+          <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 text-xs">
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-800">
+          <p class="font-semibold"><i class="fa-solid fa-circle-info mr-1"></i> สภาวะจำลอง sandbox:</p>
+          <p class="mt-1">หากเว้นว่างไว้ ระบบจะเข้าสู่โหมด **In-Memory Sandbox** ซึ่งจะบันทึกและจำลองข้อมูลอย่างสมบูรณ์แบบบนเบราว์เซอร์ของท่านเองทันทีโดยไม่ต้องเชื่อมเน็ต!</p>
+        </div>
+      </div>
+      <div class="bg-slate-50 p-3.5 flex justify-end gap-2 border-t border-slate-100 text-xs">
+        <button onclick="toggleApiModal()" class="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold transition-all">ยกเลิก</button>
+        <button onclick="saveApiConfig()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg transition-all">บันทึกเชื่อมต่อ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Evaluation Record Input Modal -->
+  <div id="evalRecordModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 hidden no-print">
+    <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full overflow-hidden">
+      <div class="bg-gradient-to-r from-teal-800 to-emerald-800 text-white p-4 flex justify-between items-center">
+        <h3 class="font-bold text-sm flex items-center gap-2">
+          <i class="fa-solid fa-pen-nib text-teal-300"></i>
+          บันทึกผลงานตัวชี้วัดจริง
+        </h3>
+        <button onclick="toggleEvalModal()" class="text-slate-300 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      
+      <form id="evalSubmitForm" onsubmit="submitEvalForm(event)" class="p-5 text-xs space-y-4">
+        <!-- Hidden elements -->
+        <input type="hidden" id="evalHospKpiId">
+        
+        <div>
+          <span class="text-[10px] font-bold text-slate-400 block uppercase">หน่วยงาน/รพ.สต. ที่ประเมิน</span>
+          <p id="evalModalHospitalName" class="text-sm font-bold text-slate-800 mt-1">-</p>
+        </div>
+
+        <div>
+          <span class="text-[10px] font-bold text-slate-400 block uppercase">ตัวชี้วัดหลัก</span>
+          <p id="evalModalKpiName" class="text-xs font-semibold text-slate-700 mt-1 leading-relaxed">-</p>
+        </div>
+
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 flex justify-between items-center text-xs">
+          <span class="text-slate-500 font-medium">เกณฑ์เป้าหมายขั้นต่ำ:</span>
+          <span class="font-extrabold text-slate-950" id="evalModalTargetText">80%</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-500 font-bold mb-1" id="evalModalNumLabel">ตัวตั้ง (ผลงาน) *</label>
+            <input type="number" step="1" id="evalNumInput" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="block text-slate-500 font-bold mb-1" id="evalModalDenLabel">ตัวหาร (เป้าหมาย) *</label>
+            <input type="number" step="1" id="evalDenInput" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-500 font-bold mb-1">ผู้บันทึกข้อมูลผลงาน *</label>
+          <input type="text" id="evalEvaluatorInput" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+          <div class="flex justify-between items-center text-xs text-emerald-800 font-bold">
+            <span>คำนวณร้อยละความสำเร็จอัตโนมัติ:</span>
+            <span id="evalCalculatedRate">0.00%</span>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 border-t border-slate-100 pt-3">
+          <button type="button" onclick="toggleEvalModal()" class="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold transition-all">ยกเลิก</button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-lg transition-all">บันทึกผลงาน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Custom Delete Confirm Modal (No alert window!) -->
+  <div id="confirmDeleteModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 hidden no-print">
+    <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full overflow-hidden">
+      <div class="bg-rose-600 text-white p-4 flex items-center gap-2.5">
+        <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        <h3 class="font-bold text-sm">ยืนยันการลบข้อมูล</h3>
+      </div>
+      <div class="p-5 text-xs text-slate-600 space-y-2">
+        <p class="font-semibold text-slate-800 text-sm">คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลชุดนี้อย่างถาวร?</p>
+        <p id="confirmDeleteDetail" class="text-slate-500">การลบจะทำให้ข้อมูลเชื่อมโยงทั้งหมดและผลการประเมินที่เกี่ยวข้องสูญหายไปทันที</p>
+      </div>
+      <div class="bg-slate-50 p-3.5 flex justify-end gap-2 border-t border-slate-100 text-xs">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold transition-all">ยกเลิก</button>
+        <button id="confirmDeleteBtn" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg transition-all">ยืนยันการลบ</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==============================================
+       SYSTEM CORE JAVASCRIPT
+       ============================================== -->
+  <script>
+    // --------------------------------------------------------------------------
+    // 1. STATE & LOCAL DATABASE (IN-MEMORY FALLBACK)
+    // --------------------------------------------------------------------------
+    let appConfig = {
+      gasApiUrl: "",
+      currentUserRole: "Admin",
+      currentUserHospital: "PCU รพ.กู่แก้ว",
+      currentUserId: "STF-001",
+      scopeHospital: "ALL",
+      scopeStaff: "ALL"
+    };
+
+    // จำลองฐานข้อมูลเริ่มต้น
+    let kpiCoreData = [
+      { KPI_ID: "KPI-001", KPI_Name: "ร้อยละของประชากรกลุ่มเป้าหมายได้รับวัคซีนป้องกันโรคไข้หวัดใหญ่ตามฤดูกาล", Strategy: "ยุทธศาสตร์ที่ 1: การส่งเสริมสุขภาพและป้องกันโรค", Global_Target_Percent: 80, Weight: 15, Numerator_Desc: "จำนวนกลุ่มเป้าหมายที่ได้รับวัคซีน", Denominator_Desc: "จำนวนประชากรกลุ่มเป้าหมายทั้งหมด" },
+      { KPI_ID: "KPI-002", KPI_Name: "ร้อยละของผู้ป่วยโรคเบาหวานควบคุมระดับน้ำตาลได้ดี (HbA1c < 7%)", Strategy: "ยุทธศาสตร์ที่ 2: การพัฒนาบริการและการส่งต่อ", Global_Target_Percent: 55, Weight: 20, Numerator_Desc: "จำนวนผู้ป่วยโรคเบาหวานที่ควบคุมได้ดี", Denominator_Desc: "จำนวนผู้ป่วยโรคเบาหวานทั้งหมดที่ได้รับการตรวจ" },
+      { KPI_ID: "KPI-003", KPI_Name: "อัตราความสำเร็จการรักษาผู้ป่วยวัณโรครายใหม่และกลับเป็นซ้ำปอด", Strategy: "ยุทธศาสตร์ที่ 1: การส่งเสริมสุขภาพและป้องกันโรค", Global_Target_Percent: 85, Weight: 15, Numerator_Desc: "จำนวนผู้ป่วยวัณโรคที่รักษาหายและครบการรักษา", Denominator_Desc: "จำนวนผู้ป่วยวัณโรคที่ขึ้นทะเบียนรักษาทั้งหมด" },
+      { KPI_ID: "KPI-004", KPI_Name: "ร้อยละของเด็กอายุ 1 ปี ได้รับวัคซีนครบตามเกณฑ์ (EPI)", Strategy: "ยุทธศาสตร์ที่ 1: การส่งเสริมสุขภาพและป้องกันโรค", Global_Target_Percent: 90, Weight: 15, Numerator_Desc: "จำนวนเด็กอายุ 1 ปีที่ได้รับวัคซีนครบ", Denominator_Desc: "จำนวนเด็กอายุ 1 ปีทั้งหมดในพื้นที่รับผิดชอบ" },
+      { KPI_ID: "KPI-005", KPI_Name: "ระดับความสำเร็จของการจัดบริการคลินิกหมอครอบครัว (FCT)", Strategy: "ยุทธศาสตร์ที่ 3: การพัฒนาระบบบริหารจัดการ", Global_Target_Percent: 80, Weight: 15, Numerator_Desc: "ระดับคะแนนการประเมินตนเองตามเกณฑ์", Denominator_Desc: "คะแนนเต็มการประเมิน (100)" },
+      { KPI_ID: "KPI-006", KPI_Name: "ร้อยละความพึงพอใจของผู้รับบริการในหน่วยบริการปฐมภูมิ", Strategy: "ยุทธศาสตร์ที่ 3: การพัฒนาระบบบริหารจัดการ", Global_Target_Percent: 85, Weight: 20, Numerator_Desc: "จำนวนผู้รับบริการที่ประเมินพึงพอใจดีขึ้นไป", Denominator_Desc: "จำนวนผู้รับบริการที่ตอบแบบประเมินทั้งหมด" }
+    ];
+
+    let kpiHospitalsData = [];
+    
+    // รายชื่อเจ้าหน้าที่เริ่มต้น
+    let staffData = [
+      { Staff_ID: "STF-001", Name: "นพ.วิทยา ศิริวิชัย", Hospital_Name: "PCU รพ.กู่แก้ว", Position: "ผู้อำนวยการโรงพยาบาล", Role: "Admin", Email: "wittaya.k@moph.go.th" },
+      { Staff_ID: "STF-002", Name: "นางสมศรี จิตแจ่มใส", Hospital_Name: "PCU รพ.กู่แก้ว", Position: "พยาบาลวิชาชีพชำนาญการ", Role: "เจ้าหน้าที่", Email: "somsri.j@moph.go.th" },
+      { Staff_ID: "STF-003", Name: "นายธวัชชัย ร่มเย็น", Hospital_Name: "รพ.สต.บ้านจีต", Position: "ผู้อำนวยการ รพ.สต.", Role: "ผอ.รพ.สต.", Email: "thawatchai.r@moph.go.th" },
+      { Staff_ID: "STF-004", Name: "นางสาววิลาวรรณ พรมอินทร์", Hospital_Name: "รพ.สต.คอนสาย", Position: "ผู้อำนวยการ รพ.สต.", Role: "ผอ.รพ.สต.", Email: "wilawan.p@moph.go.th" },
+      { Staff_ID: "STF-005", Name: "นายพงศธร รักษาสุข", Hospital_Name: "รพ.สต.ค้อใหญ่", Position: "ผู้อำนวยการ รพ.สต.", Role: "ผอ.รพ.สต.", Email: "pongsatorn.r@moph.go.th" },
+      { Staff_ID: "STF-006", Name: "นางณิชชา ดีมั่น", Hospital_Name: "รพ.สต.โนนทองอินทร์", Position: "ผู้อำนวยการ รพ.สต.", Role: "ผอ.รพ.สต.", Email: "nichcha.d@moph.go.th" },
+      { Staff_ID: "STF-007", Name: "นายสมบัติ สุขใจ", Hospital_Name: "รพ.สต.ซำป่ารัง", Position: "ผู้อำนวยการ รพ.สต.", Role: "ผอ.รพ.สต.", Email: "sombat.s@moph.go.th" },
+      { Staff_ID: "STF-008", Name: "นายเกียรติศักดิ์ พรหมดี", Hospital_Name: "PCU รพ.กู่แก้ว", Position: "สาธารณสุขอำเภอกู่แก้ว", Role: "สาธารณสุขอำเภอ", Email: "kiatisak.p@moph.go.th" }
+    ];
+
+    // ข้อมูลหน่วยงานแบบ Dynamic Array ที่สามารถเพิ่ม แก้ไข และลบได้
+    let HOSPITALS = [
+      "PCU รพ.กู่แก้ว",
+      "รพ.สต.บ้านจีต",
+      "รพ.สต.คอนสาย",
+      "รพ.สต.ค้อใหญ่",
+      "รพ.สต.โนนทองอินทร์",
+      "รพ.สต.ซำป่ารัง"
+    ];
+
+    let deleteCallback = null;
+
+    // --------------------------------------------------------------------------
+    // 2. LIFECYCLE & INITIALIZATION
+    // --------------------------------------------------------------------------
+    window.onload = function() {
+      // โหลดการเชื่อมต่อ API ที่เคยบันทึกไว้
+      const savedGasUrl = localStorage.getItem("koo_kaew_gas_url");
+      if (savedGasUrl) {
+        appConfig.gasApiUrl = savedGasUrl;
+        document.getElementById("gasUrlInput").value = savedGasUrl;
+        updateConnectionUI(true);
+      } else {
+        updateConnectionUI(false);
+      }
+
+      // ตรวจสอบข้อมูลหน่วยงานที่บันทึกไว้ใน LocalStorage หรือสร้างจำลองเริ่มต้น
+      const savedHospitals = localStorage.getItem("koo_kaew_hospitals_list");
+      if (savedHospitals) {
+        HOSPITALS = JSON.parse(savedHospitals);
+      }
+
+      // สร้างข้อมูล Hospital KPI ในกรณีเริ่มต้น เพื่อให้มี Sandbox เล่นได้สมบูรณ์
+      generateMockHospitalKpis();
+      
+      // ดึงข้อมูลหลักจากเซิร์ฟเวอร์ (หากมีการเชื่อมต่อ) หรือใช้ในเครื่อง
+      fetchDatabase();
+
+      // สร้างรายการผู้ใช้งานจำลองสำหรับ Login Panel
+      populateLoginUsers();
+    };
+
+    /**
+     * ดึงพนักงานทุกคนมาสร้างตัวเลือกผู้ใช้งานจำลอง (Simulated Login Dropdown)
+     */
+    function populateLoginUsers() {
+      const select = document.getElementById("userLoginSelect");
+      select.innerHTML = "";
+      
+      staffData.forEach(stf => {
+        const opt = document.createElement("option");
+        opt.value = stf.Staff_ID;
+        opt.textContent = `${stf.Name} (${stf.Role} - ${stf.Hospital_Name})`;
+        select.appendChild(opt);
+      });
+
+      // ตั้งค่าเป็นคนแรกตามค่าเริ่มต้น (STF-001 - นพ.วิทยา)
+      select.value = appConfig.currentUserId;
+      syncUserSecurity(appConfig.currentUserId);
+    }
+
+    /**
+     * สุ่มสร้างข้อมูล KPI สำหรับหน่วยงานทั้งหมดที่มีในระบบปัจจุบัน
+     */
+    function generateMockHospitalKpis() {
+      kpiHospitalsData = [];
+      let counter = 1;
+      kpiCoreData.forEach(core => {
+        HOSPITALS.forEach(h => {
+          const dVal = Math.floor(Math.random() * 80) + 40; 
+          const nVal = Math.floor(dVal * (Math.random() * 0.45 + 0.50)); 
+          const pct = parseFloat(((nVal / dVal) * 100).toFixed(2));
+          const wScore = parseFloat(((pct / 100) * core.Weight).toFixed(2));
+          
+          kpiHospitalsData.push({
+            Hosp_KPI_ID: "HKPI-" + String(counter++).padStart(4, '0'),
+            KPI_ID: core.KPI_ID,
+            Hospital_Name: h,
+            Target_Percent: core.Global_Target_Percent,
+            Numerator_Value: nVal,
+            Denominator_Value: dVal,
+            Actual_Percent: pct,
+            Weight_Score: wScore,
+            Evaluator_Name: "ระบบตั้งต้นจำลอง",
+            Last_Updated: new Date().toISOString()
+          });
+        });
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // 3. DATABASE FETCHING & WRITING
+    // --------------------------------------------------------------------------
+    async function fetchDatabase() {
+      if (!appConfig.gasApiUrl) {
+        showToast("เปิดใช้งานในระบบจำลอง (Sandbox)", "info");
+        rebuildAllViews();
+        return;
+      }
+
+      showToast("กำลังเชื่อมต่อดึงข้อมูลจาก Google Sheets...", "info");
+      
+      try {
+        const response = await fetch(`${appConfig.gasApiUrl}?action=getAllData`);
+        const result = await response.json();
+        
+        if (result.success) {
+          kpiCoreData = result.kpiCore;
+          kpiHospitalsData = result.kpiHospitals;
+          staffData = result.staff;
+          
+          // หาลิสต์โรงพยาบาลจากผลงานจริง
+          const extractedHospitals = [...new Set(kpiHospitalsData.map(h => h.Hospital_Name))];
+          if (extractedHospitals.length > 0) {
+            HOSPITALS = extractedHospitals;
+            localStorage.setItem("koo_kaew_hospitals_list", JSON.stringify(HOSPITALS));
+          }
+
+          kpiCoreData.forEach(d => d.Global_Target_Percent = parseFloat(d.Global_Target_Percent));
+          kpiHospitalsData.forEach(d => {
+            d.Target_Percent = parseFloat(d.Target_Percent);
+            d.Numerator_Value = parseFloat(d.Numerator_Value);
+            d.Denominator_Value = parseFloat(d.Denominator_Value);
+            d.Actual_Percent = parseFloat(d.Actual_Percent);
+            d.Weight_Score = parseFloat(d.Weight_Score);
+          });
+          
+          showToast("เชื่อมโยง Google Sheets เรียบร้อยแล้ว", "success");
+          updateConnectionUI(true);
+          
+          // อัปเดตเมนูล็อกอินและสิทธิ์
+          populateLoginUsers();
+          rebuildAllViews();
+        } else {
+          showToast("ไม่สามารถเรียกข้อมูล: " + result.error, "danger");
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        showToast("ไม่สำเร็จ: ตรวจสอบ CORS หรืออินเทอร์เน็ตของท่าน", "danger");
+      }
+    }
+
+    async function writeDatabase(action, payload) {
+      if (!appConfig.gasApiUrl) {
+        return simulateLocalWrite(action, payload);
+      }
+
+      showToast("กำลังเขียนบันทึกข้อมูลไปยังระบบหลัก...", "info");
+      
+      try {
+        const response = await fetch(appConfig.gasApiUrl, {
+          method: "POST",
+          mode: "no-cors", 
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ action: action, ...payload })
+        });
+        
+        setTimeout(async () => {
+          await fetchDatabase();
+          showToast("อัปเดตข้อมูลเสร็จสิ้น", "success");
+        }, 1500);
+        return true;
+        
+      } catch (err) {
+        showToast("เกิดข้อผิดพลาดในการส่งข้อมูล: " + err.toString(), "danger");
+        return false;
+      }
+    }
+
+    /**
+     * จำลองการเขียนข้อมูลในเครื่อง (Sandbox Mode)
+     */
+    function simulateLocalWrite(action, payload) {
+      if (action === "updateEvaluation") {
+        const { Hosp_KPI_ID, Numerator_Value, Denominator_Value, Evaluator_Name } = payload;
+        const record = kpiHospitalsData.find(d => d.Hosp_KPI_ID === Hosp_KPI_ID);
+        if (record) {
+          const coreKpi = kpiCoreData.find(c => c.KPI_ID === record.KPI_ID);
+          const weight = coreKpi ? coreKpi.Weight : 10;
+          
+          record.Numerator_Value = parseFloat(Numerator_Value) || 0;
+          record.Denominator_Value = parseFloat(Denominator_Value) || 1;
+          record.Actual_Percent = parseFloat(((record.Numerator_Value / record.Denominator_Value) * 100).toFixed(2));
+          record.Weight_Score = parseFloat(((record.Actual_Percent / 100) * weight).toFixed(2));
+          record.Evaluator_Name = Evaluator_Name;
+          record.Last_Updated = new Date().toISOString();
+          
+          showToast("บันทึกผลสัมฤทธิ์เรียบร้อย", "success");
+        }
+      } 
+      else if (action === "saveCoreKpi") {
+        const { KPI_ID, KPI_Name, Strategy, Global_Target_Percent, Weight, Numerator_Desc, Denominator_Desc } = payload;
+        
+        if (KPI_ID) {
+          const core = kpiCoreData.find(c => c.KPI_ID === KPI_ID);
+          if (core) {
+            core.KPI_Name = KPI_Name;
+            core.Strategy = Strategy;
+            core.Global_Target_Percent = parseFloat(Global_Target_Percent);
+            core.Weight = parseFloat(Weight);
+            core.Numerator_Desc = Numerator_Desc;
+            core.Denominator_Desc = Denominator_Desc;
+            
+            kpiHospitalsData.forEach(h => {
+              if (h.KPI_ID === KPI_ID) {
+                h.Target_Percent = parseFloat(Global_Target_Percent);
+                h.Actual_Percent = parseFloat(((h.Numerator_Value / h.Denominator_Value) * 100).toFixed(2));
+                h.Weight_Score = parseFloat(((h.Actual_Percent / 100) * parseFloat(Weight)).toFixed(2));
+              }
+            });
+            showToast("อัปเดตตัวชี้วัดเรียบร้อย", "success");
+          }
+        } else {
+          const newId = "KPI-" + String(kpiCoreData.length + 1).padStart(3, '0');
+          kpiCoreData.push({
+            KPI_ID: newId, KPI_Name, Strategy, 
+            Global_Target_Percent: parseFloat(Global_Target_Percent), 
+            Weight: parseFloat(Weight), Numerator_Desc, Denominator_Desc
+          });
+          
+          let hospCounter = kpiHospitalsData.length + 1;
+          HOSPITALS.forEach(h => {
+            kpiHospitalsData.push({
+              Hosp_KPI_ID: "HKPI-" + String(hospCounter++).padStart(4, '0'),
+              KPI_ID: newId,
+              Hospital_Name: h,
+              Target_Percent: parseFloat(Global_Target_Percent),
+              Numerator_Value: 0,
+              Denominator_Value: 1,
+              Actual_Percent: 0,
+              Weight_Score: 0,
+              Evaluator_Name: "ระบบจำลอง",
+              Last_Updated: new Date().toISOString()
+            });
+          });
+          showToast("เพิ่มตัวชี้วัดใหม่เรียบร้อย", "success");
+        }
+      } 
+      else if (action === "deleteKpi") {
+        const { KPI_ID } = payload;
+        kpiCoreData = kpiCoreData.filter(c => c.KPI_ID !== KPI_ID);
+        kpiHospitalsData = kpiHospitalsData.filter(h => h.KPI_ID !== KPI_ID);
+        showToast("ลบตัวชี้วัดสำเร็จ", "warning");
+      } 
+      else if (action === "saveStaff") {
+        const { Staff_ID, Name, Hospital_Name, Position, Role, Email } = payload;
+        if (Staff_ID) {
+          const staff = staffData.find(s => s.Staff_ID === Staff_ID);
+          if (staff) {
+            staff.Name = Name;
+            staff.Hospital_Name = Hospital_Name;
+            staff.Position = Position;
+            staff.Role = Role;
+            staff.Email = Email;
+            showToast("แก้ไขข้อมูลบุคลากรเรียบร้อย", "success");
+          }
+        } else {
+          const newId = "STF-" + String(staffData.length + 1).padStart(3, '0');
+          staffData.push({ Staff_ID: newId, Name, Hospital_Name, Position, Role, Email });
+          showToast("ลงทะเบียนบุคลากรใหม่เรียบร้อย", "success");
+        }
+      } 
+      else if (action === "deleteStaff") {
+        const { Staff_ID } = payload;
+        staffData = staffData.filter(s => s.Staff_ID !== Staff_ID);
+        showToast("ลบข้อมูลบุคลากรเรียบร้อย", "warning");
+      }
+
+      rebuildAllViews();
+      return true;
+    }
+
+    // --------------------------------------------------------------------------
+    // 4. CORE CONTROLLERS & VIEW REBUILDERS (SECURITY LOCK IMPLEMENTATION)
+    // --------------------------------------------------------------------------
+    
+    /**
+     * ฟังก์ชันตรวจสอบสิทธิ์และบังคับใช้มาตรการแยกสิทธิ์ข้อมูล (Data Segregation Rules)
+     */
+    function syncUserSecurity(userId) {
+      const user = staffData.find(s => s.Staff_ID === userId);
+      if (!user) return;
+
+      appConfig.currentUserId = user.Staff_ID;
+      appConfig.currentUserRole = user.Role;
+      appConfig.currentUserHospital = user.Hospital_Name;
+
+      const isKpiAdmin = (user.Role === "Admin" || user.Role === "สาธารณสุขอำเภอ");
+
+      // ดึง Element ควบคุมต่างๆ ของระบบสิทธิ์และตัวกรอง
+      const scopeHospSelect = document.getElementById("scopeHospital");
+      const scopeStaffSelect = document.getElementById("scopeStaff");
+      const clearFilterBtn = document.getElementById("clearFilterBtn");
+      const alertClearBtn = document.getElementById("alertClearBtn");
+      const securityBanner = document.getElementById("securityRestrictBanner");
+      
+      const tabMatrix = document.getElementById("tab-matrix");
+      const tabKpiMgmt = document.getElementById("tab-kpi-mgmt");
+      const tabStaffMgmt = document.getElementById("tab-staff-mgmt");
+
+      if (isKpiAdmin) {
+        // --- 1. สิทธิ์ระดับ คปสอ./ผู้บริหาร (เห็นข้อมูลทุกอย่าง) ---
+        scopeHospSelect.disabled = false;
+        scopeStaffSelect.disabled = false;
+        if (clearFilterBtn) clearFilterBtn.disabled = false;
+        if (alertClearBtn) alertClearBtn.classList.remove("hidden");
+        if (securityBanner) securityBanner.classList.add("hidden");
+
+        // เปิดแสดงแท็บการตั้งค่าและ Matrix ทั้งหมด
+        if (tabMatrix) tabMatrix.classList.remove("hidden");
+        if (tabKpiMgmt) tabKpiMgmt.classList.remove("hidden");
+        if (tabStaffMgmt) tabStaffMgmt.classList.remove("hidden");
+        
+        // เคลียร์ค่าล็อก ให้ผู้ใช้อิสระในการฟิลเตอร์
+        appConfig.scopeHospital = scopeHospSelect.value;
+        appConfig.scopeStaff = scopeStaffSelect.value;
+
+        // คืนค่าป้ายกำกับ Dashboard
+        document.getElementById("dashboardTableTitle").textContent = "สรุปสถานการณ์ตัวชี้วัดปี 2569 รายข้อ";
+        document.getElementById("dashboardTableSubTitle").textContent = "หน่วยบริการทั้งหมดใช้ร่วมประเมิน ผลการดำเนินงานสรุปในภาพรวมปัจจุบัน";
+        document.getElementById("tableHeaderResult").textContent = "ผลงานเฉลี่ย คปสอ.";
+        document.getElementById("rankingGridSection").classList.remove("hidden");
+
+        // ปิดกั้นหน้า Matrix restriction
+        document.getElementById("matrixAccessRestricted").classList.add("hidden");
+        document.getElementById("matrixContent").classList.remove("hidden");
+
+      } else {
+        // --- 2. สิทธิ์ระดับ รพ.สต./พนักงานทั่วไป (ล็อกข้อมูลเฉพาะตนเอง) ---
+        // ล็อกตัวเลือกการกรองระดับขอบเขตข้อมูลเป็น รพ.สต. สังกัดตนเอง และห้ามแก้ไข
+        scopeHospSelect.value = user.Hospital_Name;
+        scopeHospSelect.disabled = true;
+        
+        // บังคับจำกัดสิทธิ์ข้อมูลผู้บันทึกเป็นชื่อของตนเอง (หรือแสดงข้อมูลทั้งหมดของ รพ.สต. ตนเอง แต่ห้ามดูที่อื่น)
+        scopeStaffSelect.value = "ALL"; // แสดงผลงานรวมของ รพ.สต. ตนเองทั้งหมด
+        scopeStaffSelect.disabled = true;
+
+        if (clearFilterBtn) clearFilterBtn.disabled = true;
+        if (alertClearBtn) alertClearBtn.classList.add("hidden");
+        if (securityBanner) securityBanner.classList.remove("hidden");
+
+        // บังคับเปลี่ยนสถานะ Filter ในหน่วยความจำระบบ
+        appConfig.scopeHospital = user.Hospital_Name;
+        appConfig.scopeStaff = "ALL";
+
+        // ซ่อนเมนูตั้งค่าโครงสร้างระดับ คปสอ. เพื่อความปลอดภัยของฐานข้อมูล
+        if (tabKpiMgmt) tabKpiMgmt.classList.add("hidden");
+        if (tabStaffMgmt) tabStaffMgmt.classList.add("hidden");
+        
+        // สำหรับแท็บ Matrix (ตารางเปรียบเทียบ) แสดง Banner แจ้งเตือนปฏิเสธการเข้าถึงเปรียบเทียบ รพ.สต. อื่น
+        document.getElementById("matrixAccessRestricted").classList.remove("hidden");
+        document.getElementById("matrixContent").classList.add("hidden");
+
+        // ปรับแต่งป้ายข้อมูล Dashboard ให้รู้ว่านี่คือของหน่วยงานตนเองเท่านั้น
+        document.getElementById("dashboardTableTitle").textContent = `สรุปสถานการณ์ KPI สังกัด: ${user.Hospital_Name}`;
+        document.getElementById("dashboardTableSubTitle").textContent = "แสดงสถานะความก้าวหน้าและผลงานเฉพาะหน่วยงานสังกัดของท่านตามมาตรการแยกสิทธิ์ข้อมูล";
+        document.getElementById("tableHeaderResult").textContent = "ผลงาน รพ.สต. จริง";
+        
+        // ซ่อนแผงเปรียบเทียบอันดับเครือข่าย เพื่อความเป็นส่วนตัวของข้อมูล รพ.สต. อื่น
+        document.getElementById("rankingGridSection").classList.add("hidden");
+      }
+
+      // ตรวจสอบและบังคับการล็อก dropdown ในหน้าประเมิน
+      const evalHospSelect = document.getElementById("evalHospitalSelect");
+      if (evalHospSelect) {
+        if (!isKpiAdmin) {
+          evalHospSelect.value = user.Hospital_Name;
+          evalHospSelect.disabled = true;
+        } else {
+          evalHospSelect.disabled = false;
+        }
+      }
+    }
+
+    /**
+     * เกิดขึ้นเมื่อมีการกดสลับตัวตน Login ด้านขวาบน
+     */
+    function handleUserLoginChange(userId) {
+      syncUserSecurity(userId);
+      rebuildAllViews();
+      
+      const user = staffData.find(s => s.Staff_ID === userId);
+      showToast(`ยินดีต้อนรับคุณ ${user.Name} (${user.Position}) เข้าสู่ระบบอย่างปลอดภัย`, "success");
+    }
+
+    function rebuildAllViews() {
+      // โหลด/จัดรูปแบบ ตัวเลือก Dynamic Dropdowns ทั้งหมด
+      rebuildDynamicDropdowns();
+      
+      // อัปเดตหน้า Dashboard
+      renderDashboardStats();
+      renderStrategyChart();
+      renderDashboardTable();
+      renderRankings();
+      
+      // อัปเดตหน้าบันทึกผล
+      loadEvalList();
+
+      // อัปเดตตารางสรุปรวม Matrix
+      renderMatrix();
+      
+      // อัปเดตหน้าตั้งค่าตัวชี้วัดหลัก
+      renderCoreKpiSettings();
+
+      // อัปเดตหน้าทะเบียนหน่วยงาน & เจ้าหน้าที่
+      renderHospitalSettings();
+      renderStaffSettings();
+
+      // อัปเดตหน้ารายงานใบรับรอง
+      renderReportView();
+    }
+
+    /**
+     * อัปเดตตัวกรองต่างๆ ทั่วทั้งแอป เพื่อให้สอดรับกับหน่วยงานที่มีจริงแบบ Real-time
+     */
+    function rebuildDynamicDropdowns() {
+      const user = staffData.find(s => s.Staff_ID === appConfig.currentUserId);
+      const isKpiAdmin = user && (user.Role === "Admin" || user.Role === "สาธารณสุขอำเภอ");
+
+      // 1. อัปเดต Dropdown ใน Main Scope Filter (ระดับหน่วยงาน)
+      const scopeHospSelect = document.getElementById("scopeHospital");
+      const currentHospFilter = appConfig.scopeHospital;
+      scopeHospSelect.innerHTML = '<option value="ALL">-- คปสอ.กู่แก้ว (ทั้งหมด) --</option>';
+      HOSPITALS.forEach(h => {
+        const opt = document.createElement("option");
+        opt.value = h;
+        opt.textContent = h;
+        scopeHospSelect.appendChild(opt);
+      });
+      // คืนค่าที่เลือกก่อนหน้า
+      if (isKpiAdmin) {
+        if (HOSPITALS.includes(currentHospFilter)) {
+          scopeHospSelect.value = currentHospFilter;
+        } else {
+          appConfig.scopeHospital = "ALL";
+          scopeHospSelect.value = "ALL";
+        }
+      } else {
+        scopeHospSelect.value = appConfig.currentUserHospital;
+      }
+
+      // 2. อัปเดต Dropdown เลือกบันทึกในแท็บบันทึกผลงาน (Evaluation Page)
+      const evalHospSelect = document.getElementById("evalHospitalSelect");
+      const currentEvalHosp = evalHospSelect.value;
+      evalHospSelect.innerHTML = '';
+      HOSPITALS.forEach(h => {
+        const opt = document.createElement("option");
+        opt.value = h;
+        opt.textContent = h;
+        evalHospSelect.appendChild(opt);
+      });
+      if (isKpiAdmin) {
+        if (HOSPITALS.includes(currentEvalHosp)) {
+          evalHospSelect.value = currentEvalHosp;
+        } else if (HOSPITALS.length > 0) {
+          evalHospSelect.value = HOSPITALS[0];
+        }
+      } else {
+        evalHospSelect.value = appConfig.currentUserHospital;
+      }
+
+      // 3. อัปเดต Dropdown ในฟอร์มลงทะเบียนบุคลากร
+      const staffFormHosp = document.getElementById("staffFormHosp");
+      staffFormHosp.innerHTML = '';
+      HOSPITALS.forEach(h => {
+        const opt = document.createElement("option");
+        opt.value = h;
+        opt.textContent = h;
+        staffFormHosp.appendChild(opt);
+      });
+
+      // 4. อัปเดตตัวกรองบุคลากร (Staff Scope Filter)
+      populateStaffFilter();
+    }
+
+    function populateStaffFilter() {
+      const select = document.getElementById("scopeStaff");
+      const currentSelected = appConfig.scopeStaff;
+      const user = staffData.find(s => s.Staff_ID === appConfig.currentUserId);
+      const isKpiAdmin = user && (user.Role === "Admin" || user.Role === "สาธารณสุขอำเภอ");
+      
+      select.innerHTML = '<option value="ALL">-- บุคลากรทุกคน --</option>';
+      
+      staffData.forEach(stf => {
+        // ถ้าระบบล็อกสิทธิ์ของ รพ.สต. ตนเอง ให้กรองเฉพาะพนักงานในสังกัดเดียวกันเท่านั้น
+        if (!isKpiAdmin && stf.Hospital_Name !== appConfig.currentUserHospital) {
+          return;
+        }
+        const opt = document.createElement("option");
+        opt.value = stf.Name;
+        opt.textContent = `${stf.Name} (${stf.Hospital_Name})`;
+        select.appendChild(opt);
+      });
+      
+      if (isKpiAdmin) {
+        select.value = currentSelected;
+      } else {
+        select.value = "ALL";
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // 5. VIEW 1: DASHBOARD LOGIC (STATISTICS, RENDER SVG, TABLES)
+    // --------------------------------------------------------------------------
+    function getFilteredHospitalKpiRecords() {
+      let records = [...kpiHospitalsData];
+      
+      if (appConfig.scopeHospital !== "ALL") {
+        records = records.filter(r => r.Hospital_Name === appConfig.scopeHospital);
+      }
+      
+      if (appConfig.scopeStaff !== "ALL") {
+        records = records.filter(r => r.Evaluator_Name === appConfig.scopeStaff);
+      }
+      
+      return records;
+    }
+
+    function renderDashboardStats() {
+      const records = getFilteredHospitalKpiRecords();
+      const uniqueCoreKpis = [...new Set(records.map(r => r.KPI_ID))];
+      
+      const totalCount = records.length;
+      let passedCount = 0;
+      let totalWeightScore = 0;
+      let maxPossibleWeight = 0;
+      
+      records.forEach(rec => {
+        const core = kpiCoreData.find(c => c.KPI_ID === rec.KPI_ID);
+        if (core) {
+          const passed = rec.Actual_Percent >= rec.Target_Percent;
+          if (passed) passedCount++;
+          
+          totalWeightScore += rec.Weight_Score;
+          maxPossibleWeight += core.Weight;
+        }
+      });
+      
+      const failedCount = totalCount - passedCount;
+      const passedPercent = totalCount > 0 ? (passedCount / totalCount) * 100 : 0;
+      const failedPercent = totalCount > 0 ? (failedCount / totalCount) * 100 : 0;
+      const avgScorePercent = maxPossibleWeight > 0 ? (totalWeightScore / maxPossibleWeight) * 100 : 0;
+
+      document.getElementById("statTotalKpis").textContent = uniqueCoreKpis.length;
+      document.getElementById("statPassedKpis").textContent = passedCount;
+      document.getElementById("statPassedSub").textContent = `คิดเป็น ${passedPercent.toFixed(1)}% ของภารกิจทั้งหมด`;
+      
+      document.getElementById("statFailedKpis").textContent = failedCount;
+      document.getElementById("statFailedSub").textContent = `คิดเป็น ${failedPercent.toFixed(1)}% ของทั้งหมด`;
+      
+      document.getElementById("statAvgScore").textContent = `${avgScorePercent.toFixed(1)}%`;
+      document.getElementById("statAvgScoreSub").textContent = `สะสมคะแนน ${totalWeightScore.toFixed(1)} / เต็ม ${maxPossibleWeight.toFixed(1)}`;
+
+      const circle = document.getElementById("progressRingCircle");
+      const progressText = document.getElementById("progressText");
+      
+      progressText.textContent = `${avgScorePercent.toFixed(1)}%`;
+      
+      const offset = 440 - (avgScorePercent / 100) * 440;
+      circle.style.strokeDashoffset = offset;
+      
+      document.getElementById("progressLegendPassed").textContent = `${passedCount} รายการ`;
+      document.getElementById("progressLegendFailed").textContent = `${failedCount} รายการ`;
+    }
+
+    function renderStrategyChart() {
+      const records = getFilteredHospitalKpiRecords();
+      
+      const strategies = [
+        { label: "ยุทธศาสตร์ที่ 1", fullName: "ยุทธศาสตร์ที่ 1: การส่งเสริมสุขภาพและป้องกันโรค", totalActual: 0, count: 0 },
+        { label: "ยุทธศาสตร์ที่ 2", fullName: "ยุทธศาสตร์ที่ 2: การพัฒนาบริการและการส่งต่อ", totalActual: 0, count: 0 },
+        { label: "ยุทธศาสตร์ที่ 3", fullName: "ยุทธศาสตร์ที่ 3: การพัฒนาระบบบริหารจัดการ", totalActual: 0, count: 0 }
+      ];
+
+      records.forEach(rec => {
+        const core = kpiCoreData.find(c => c.KPI_ID === rec.KPI_ID);
+        if (core) {
+          const index = strategies.findIndex(s => s.fullName === core.Strategy);
+          if (index !== -1) {
+            strategies[index].totalActual += rec.Actual_Percent;
+            strategies[index].count++;
+          }
+        }
+      });
+
+      const data = strategies.map(s => {
+        return {
+          label: s.label,
+          percent: s.count > 0 ? parseFloat((s.totalActual / s.count).toFixed(1)) : 0
+        };
+      });
+
+      const container = document.getElementById("strategyBarChart");
+      
+      let svgContent = `
+        <svg viewBox="0 0 500 220" class="w-full h-full font-semibold">
+          <line x1="50" y1="20" x2="480" y2="20" stroke="#e2e8f0" stroke-dasharray="3" stroke-width="1" />
+          <text x="40" y="24" fill="#64748b" font-size="10" text-anchor="end">100%</text>
+
+          <line x1="50" y1="65" x2="480" y2="65" stroke="#e2e8f0" stroke-dasharray="3" stroke-width="1" />
+          <text x="40" y="69" fill="#64748b" font-size="10" text-anchor="end">75%</text>
+
+          <line x1="50" y1="110" x2="480" y2="110" stroke="#e2e8f0" stroke-dasharray="3" stroke-width="1" />
+          <text x="40" y="114" fill="#64748b" font-size="10" text-anchor="end">50%</text>
+
+          <line x1="50" y1="155" x2="480" y2="155" stroke="#e2e8f0" stroke-dasharray="3" stroke-width="1" />
+          <text x="40" y="159" fill="#64748b" font-size="10" text-anchor="end">25%</text>
+
+          <line x1="50" y1="190" x2="480" y2="190" stroke="#94a3b8" stroke-width="1.5" />
+          <text x="40" y="194" fill="#64748b" font-size="10" text-anchor="end">0%</text>
+      `;
+
+      const barWidth = 45;
+      const spacing = 110;
+      const startX = 100;
+
+      data.forEach((item, index) => {
+        const x = startX + (index * spacing);
+        const barHeight = (item.percent / 100) * 170; 
+        const y = 190 - barHeight;
+        
+        let barColor = "#f43f5e"; 
+        if (item.percent >= 80) barColor = "#10b981"; 
+        else if (item.percent >= 60) barColor = "#eab308"; 
+
+        svgContent += `
+          <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="5" fill="${barColor}" opacity="0.85" class="transition-all duration-700 hover:opacity-100 cursor-pointer">
+            <title>${item.label}: ความสำเร็จเฉลี่ย ${item.percent}%</title>
+          </rect>
+          <text x="${x + (barWidth/2)}" y="${y - 8}" fill="#1e293b" font-size="11" font-weight="bold" text-anchor="middle">${item.percent}%</text>
+          <text x="${x + (barWidth/2)}" y="208" fill="#475569" font-size="10" text-anchor="middle">${item.label}</text>
+        `;
+      });
+
+      svgContent += `</svg>`;
+      container.innerHTML = svgContent;
+    }
+
+    function renderDashboardTable() {
+      const records = getFilteredHospitalKpiRecords();
+      const searchVal = document.getElementById("kpiSearch").value.trim().toLowerCase();
+      const tbody = document.getElementById("dashboardKpiTableBody");
+      
+      tbody.innerHTML = "";
+
+      if (kpiCoreData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">ไม่พบข้อมูลดัชนีชี้วัดเพื่อแสดงผล</td></tr>`;
+        return;
+      }
+
+      kpiCoreData.forEach(core => {
+        const associatedHospKpis = records.filter(r => r.KPI_ID === core.KPI_ID);
+        if (associatedHospKpis.length === 0) return; 
+
+        const avgActual = associatedHospKpis.reduce((acc, curr) => acc + curr.Actual_Percent, 0) / associatedHospKpis.length;
+        const totalNumerator = associatedHospKpis.reduce((acc, curr) => acc + curr.Numerator_Value, 0);
+        const totalDenominator = associatedHospKpis.reduce((acc, curr) => acc + curr.Denominator_Value, 0);
+        const totalWeightScore = associatedHospKpis.reduce((acc, curr) => acc + curr.Weight_Score, 0) / associatedHospKpis.length;
+
+        if (searchVal && 
+            !core.KPI_ID.toLowerCase().includes(searchVal) && 
+            !core.KPI_Name.toLowerCase().includes(searchVal) && 
+            !core.Strategy.toLowerCase().includes(searchVal)) {
+          return;
+        }
+
+        const isPassed = avgActual >= core.Global_Target_Percent;
+        const badgeClass = isPassed 
+          ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
+          : "bg-rose-50 text-rose-700 border border-rose-200";
+        const icon = isPassed ? "fa-circle-check text-emerald-600" : "fa-circle-xmark text-rose-500";
+
+        const row = document.createElement("tr");
+        row.className = "hover:bg-slate-50 transition-all";
+        row.innerHTML = `
+          <td class="py-3 px-4 font-bold text-slate-900">${core.KPI_ID}</td>
+          <td class="py-3 px-4">
+            <div class="font-medium text-slate-800 leading-normal max-w-lg">${core.KPI_Name}</div>
+            <span class="text-[10px] text-slate-400 block mt-1"><i class="fa-solid fa-layer-group text-slate-300"></i> ${core.Strategy}</span>
+          </td>
+          <td class="py-3 px-4 font-bold text-slate-500 text-center">${core.Global_Target_Percent}%</td>
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-800">${avgActual.toFixed(2)}%</span>
+              <span class="text-[10px] text-slate-400">(${totalNumerator.toLocaleString()}/${totalDenominator.toLocaleString()})</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass}">
+              <i class="fa-solid ${icon}"></i>
+              ${isPassed ? "ผ่าน" : "ไม่ผ่าน"}
+            </span>
+          </td>
+          <td class="py-3 px-4 font-bold text-slate-950 text-right">${totalWeightScore.toFixed(2)} / ${core.Weight.toFixed(1)}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      if (tbody.children.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">ไม่พบตัวชี้วัดที่สอดคล้องกับการค้นหา</td></tr>`;
+      }
+    }
+
+    function renderRankings() {
+      const hospList = document.getElementById("hospitalRankList");
+      hospList.innerHTML = "";
+
+      const hospScores = HOSPITALS.map(hosp => {
+        const records = kpiHospitalsData.filter(r => r.Hospital_Name === hosp);
+        let totalScore = 0;
+        let totalWeight = 0;
+        let passedCount = 0;
+
+        records.forEach(r => {
+          const core = kpiCoreData.find(c => c.KPI_ID === r.KPI_ID);
+          if (core) {
+            totalScore += r.Weight_Score;
+            totalWeight += core.Weight;
+            if (r.Actual_Percent >= r.Target_Percent) passedCount++;
+          }
+        });
+
+        const successPercent = totalWeight > 0 ? (totalScore / totalWeight) * 100 : 0;
+
+        return {
+          name: hosp,
+          score: successPercent,
+          passedKpis: passedCount,
+          totalKpiCount: records.length
+        };
+      });
+
+      hospScores.sort((a, b) => b.score - a.score);
+
+      hospScores.forEach((h, index) => {
+        let rankBadge = "";
+        if (index === 0) rankBadge = "bg-amber-100 text-amber-800 border-amber-300";
+        else if (index === 1) rankBadge = "bg-slate-200 text-slate-800 border-slate-300";
+        else if (index === 2) rankBadge = "bg-amber-50 text-amber-600 border-amber-200";
+        else rankBadge = "bg-slate-50 text-slate-500 border-slate-200";
+
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between py-2.5 transition-all hover:bg-slate-50 px-2 rounded-lg";
+        div.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-6 h-6 rounded-full border text-xs font-bold flex items-center justify-center ${rankBadge}">${index + 1}</span>
+            <div>
+              <h4 class="font-bold text-slate-800 text-xs">${h.name}</h4>
+              <p class="text-[10px] text-slate-400 mt-0.5">ผ่านเกณฑ์ ${h.passedKpis} จาก ${h.totalKpiCount} ดัชนีชี้วัด</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="font-extrabold text-xs text-emerald-600">${h.score.toFixed(1)}%</span>
+            <p class="text-[9px] text-slate-400 font-medium">ความสำเร็จรวม</p>
+          </div>
+        `;
+        hospList.appendChild(div);
+      });
+
+      // 2. STAFF RANKING
+      const staffRankList = document.getElementById("staffRankList");
+      staffRankList.innerHTML = "";
+
+      const evaluators = [...new Set(kpiHospitalsData.map(r => r.Evaluator_Name))].filter(n => n && n !== "ระบบตั้งต้นจำลอง" && n !== "ระบบอัตโนมัติ" && n !== "ระบบจำลอง");
+      
+      const staffScores = evaluators.map(name => {
+        const records = kpiHospitalsData.filter(r => r.Evaluator_Name === name);
+        let totalScore = 0;
+        let totalWeight = 0;
+        
+        records.forEach(r => {
+          const core = kpiCoreData.find(c => c.KPI_ID === r.KPI_ID);
+          if (core) {
+            totalScore += r.Weight_Score;
+            totalWeight += core.Weight;
+          }
+        });
+        
+        const avgScore = totalWeight > 0 ? (totalScore / totalWeight) * 100 : 0;
+        
+        const info = staffData.find(s => s.Name === name);
+        const hosp = info ? info.Hospital_Name : "ไม่ระบุสังกัด";
+        const pos = info ? info.Position : "เจ้าหน้าที่";
+
+        return {
+          name: name,
+          hosp: hosp,
+          pos: pos,
+          score: avgScore,
+          count: records.length
+        };
+      });
+
+      staffScores.sort((a, b) => b.score - a.score);
+
+      if (staffScores.length === 0) {
+        staffRankList.innerHTML = `<p class="py-8 text-center text-slate-400 text-xs">ยังไม่มีข้อมูลประวัติผู้บันทึกผลงานในระบบสำหรับการจัดอันดับ</p>`;
+        return;
+      }
+
+      staffScores.forEach((s, index) => {
+        let medal = "";
+        if (index === 0) medal = '<i class="fa-solid fa-trophy text-amber-500"></i>';
+        else if (index === 1) medal = '<i class="fa-solid fa-medal text-slate-400"></i>';
+        else if (index === 2) medal = '<i class="fa-solid fa-medal text-amber-600"></i>';
+
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between py-2.5 transition-all hover:bg-slate-50 px-2 rounded-lg";
+        div.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="w-5 text-center text-xs font-bold text-slate-400">${medal || index + 1}</span>
+            <div>
+              <h4 class="font-bold text-slate-800 text-xs">${s.name}</h4>
+              <p class="text-[9px] text-slate-400">${s.pos} • ${s.hosp}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="font-extrabold text-xs text-cyan-600">${s.score.toFixed(1)}%</span>
+            <p class="text-[9px] text-slate-400">${s.count} รายการผลงาน</p>
+          </div>
+        `;
+        staffRankList.appendChild(div);
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // 6. VIEW 2: EVALUATION (กรอกผลงานรายแห่ง)
+    // --------------------------------------------------------------------------
+    function loadEvalList() {
+      const selectedHosp = document.getElementById("evalHospitalSelect").value;
+      const tbody = document.getElementById("evaluationTableBody");
+      
+      tbody.innerHTML = "";
+
+      if (!selectedHosp) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">กรุณาลงทะเบียนหน่วยงานก่อนในหน้าระบบลงทะเบียน</td></tr>`;
+        return;
+      }
+
+      const hospKpiRecords = kpiHospitalsData.filter(r => r.Hospital_Name === selectedHosp);
+
+      if (hospKpiRecords.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">ไม่มีข้อมูลตัวชี้วัดถูกกำหนดให้กับหน่วยงานแห่งนี้</td></tr>`;
+        return;
+      }
+
+      const isAllowedToEval = checkEvaluationPermission(selectedHosp);
+
+      hospKpiRecords.forEach(rec => {
+        const core = kpiCoreData.find(c => c.KPI_ID === rec.KPI_ID);
+        if (!core) return;
+
+        const isPassed = rec.Actual_Percent >= rec.Target_Percent;
+        const badgeClass = isPassed ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800";
+        
+        const row = document.createElement("tr");
+        row.className = "hover:bg-slate-50 transition-all";
+        row.innerHTML = `
+          <td class="py-3 px-4 font-bold text-slate-800">${rec.KPI_ID}</td>
+          <td class="py-3 px-4">
+            <div class="font-semibold text-slate-800 max-w-sm leading-normal">${core.KPI_Name}</div>
+            <div class="text-[10px] text-slate-400 mt-1">
+              <span class="block"><strong>ตัวตั้ง:</strong> ${core.Numerator_Desc}</span>
+              <span class="block"><strong>ตัวหาร:</strong> ${core.Denominator_Desc}</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-center font-bold text-slate-500">${rec.Target_Percent}%</td>
+          <td class="py-3 px-4 text-center font-semibold text-slate-700">${rec.Numerator_Value.toLocaleString()}</td>
+          <td class="py-3 px-4 text-center font-semibold text-slate-700">${rec.Denominator_Value.toLocaleString()}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="font-extrabold text-slate-900">${rec.Actual_Percent.toFixed(2)}%</span>
+            <span class="block text-[9px] text-slate-400">คะแนนสะสม ${rec.Weight_Score}</span>
+          </td>
+          <td class="py-3 px-4 text-center">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded ${badgeClass}">
+              ${isPassed ? "ผ่านเกณฑ์" : "ตกเกณฑ์"}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right">
+            ${isAllowedToEval 
+              ? `<button onclick="openEvalModal('${rec.Hosp_KPI_ID}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-2.5 rounded text-[11px] transition-all"><i class="fa-solid fa-file-pen"></i> ประเมิน</button>`
+              : `<button disabled class="bg-slate-200 text-slate-400 font-bold py-1 px-2.5 rounded text-[11px] cursor-not-allowed" title="สิทธิ์บัญชีของท่านไม่สามารถแก้ไขผลงานหน่วยงานนี้ได้"><i class="fa-solid fa-lock"></i> ล็อค</button>`
+            }
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function checkEvaluationPermission(targetHosp) {
+      const user = staffData.find(s => s.Staff_ID === appConfig.currentUserId);
+      if (!user) return false;
+      
+      const role = user.Role;
+      if (role === "Admin" || role === "สาธารณสุขอำเภอ") return true;
+      
+      // ผอ.รพ.สต. และ เจ้าหน้าที่ สามารถแก้ไขผลเฉพาะของ รพ.สต. ที่ตัวเองรับผิดชอบเท่านั้น
+      return user.Hospital_Name === targetHosp;
+    }
+
+    // --------------------------------------------------------------------------
+    // 7. VIEW 3: MATRIX GRID VIEW
+    // --------------------------------------------------------------------------
+    function renderMatrix() {
+      const table = document.getElementById("matrixTable");
+      table.innerHTML = "";
+
+      if (kpiCoreData.length === 0) {
+        table.innerHTML = `<tr><td class="py-8 text-center text-slate-400">ไม่พบหัวข้อดัชนีชี้วัดเพื่อสร้างรายงานเปรียบเทียบ</td></tr>`;
+        return;
+      }
+
+      if (HOSPITALS.length === 0) {
+        table.innerHTML = `<tr><td class="py-8 text-center text-slate-400">กรุณาเพิ่มหน่วยงานก่อนในระบบจัดการ</td></tr>`;
+        return;
+      }
+
+      // สร้างส่วนหัวตารางแบบไดนามิกขึ้นอยู่กับหน่วยงานจริงที่มี
+      let headersHtml = `
+        <thead>
+          <tr class="bg-slate-800 text-white font-bold text-center">
+            <th class="py-3 px-4 text-left border border-slate-700 w-24">รหัส KPI</th>
+            <th class="py-3 px-4 text-left border border-slate-700">ชื่อตัวชี้วัด (เป้าหมายหลัก)</th>
+      `;
+      HOSPITALS.forEach(hosp => {
+        headersHtml += `<th class="py-3 px-2 border border-slate-700 w-28">${hosp}</th>`;
+      });
+      headersHtml += `</tr></thead>`;
+
+      let bodyHtml = '<tbody class="divide-y divide-slate-200 bg-white">';
+      kpiCoreData.forEach(core => {
+        bodyHtml += `
+          <tr class="hover:bg-slate-50 border-b border-slate-100">
+            <td class="py-3 px-4 font-bold text-slate-900 border-r border-slate-100">${core.KPI_ID}</td>
+            <td class="py-3 px-4 font-medium text-slate-800 leading-normal border-r border-slate-100">
+              ${core.KPI_Name}
+              <span class="block text-[10px] text-slate-400 font-bold mt-0.5">เป้าหมายร่วม: ${core.Global_Target_Percent}%</span>
+            </td>
+        `;
+
+        HOSPITALS.forEach(hosp => {
+          const matched = kpiHospitalsData.find(h => h.KPI_ID === core.KPI_ID && h.Hospital_Name === hosp);
+          if (matched) {
+            const isPassed = matched.Actual_Percent >= core.Global_Target_Percent;
+            const bgClass = isPassed ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800";
+            const icon = isPassed ? "fa-circle-check text-emerald-600" : "fa-circle-xmark text-rose-500";
+            
+            bodyHtml += `
+              <td class="py-3 px-2 text-center border-r border-slate-100 ${bgClass}">
+                <div class="font-bold text-xs">${matched.Actual_Percent.toFixed(1)}%</div>
+                <div class="text-[9px] text-slate-400 mt-0.5">${matched.Numerator_Value}/${matched.Denominator_Value}</div>
+                <i class="fa-solid ${icon} text-[10px] mt-1"></i>
+              </td>
+            `;
+          } else {
+            bodyHtml += `<td class="py-3 px-2 text-center text-slate-300 border-r border-slate-100 font-bold">-</td>`;
+          }
+        });
+
+        bodyHtml += `</tr>`;
+      });
+      bodyHtml += '</tbody>';
+
+      table.innerHTML = headersHtml + bodyHtml;
+    }
+
+    // --------------------------------------------------------------------------
+    // 8. VIEW 4: KPI SETTINGS (เพิ่ม/ลบ/แก้ไข KPI Core)
+    // --------------------------------------------------------------------------
+    function renderCoreKpiSettings() {
+      const tbody = document.getElementById("kpiListTableBody");
+      tbody.innerHTML = "";
+
+      if (kpiCoreData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">ยังไม่มีตัวชี้วัดหลักในระบบ</td></tr>`;
+        return;
+      }
+
+      kpiCoreData.forEach(core => {
+        const row = document.createElement("tr");
+        row.className = "hover:bg-slate-50 transition-all border-b border-slate-100";
+        row.innerHTML = `
+          <td class="py-3 px-3 font-bold text-slate-900">${core.KPI_ID}</td>
+          <td class="py-3 px-3">
+            <div class="font-semibold text-slate-800 leading-normal">${core.KPI_Name}</div>
+            <div class="text-[10px] text-slate-400 mt-1 font-medium"><i class="fa-solid fa-layer-group text-slate-300"></i> ${core.Strategy}</div>
+          </td>
+          <td class="py-3 px-3 text-center font-bold text-slate-700">${core.Global_Target_Percent}%</td>
+          <td class="py-3 px-3 text-center font-bold text-slate-700">${core.Weight}</td>
+          <td class="py-3 px-3 text-right">
+            <div class="flex justify-end gap-1.5">
+              <button onclick="editKpiCore('${core.KPI_ID}')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 p-1 px-2 rounded font-bold" title="แก้ไข"><i class="fa-solid fa-pencil"></i></button>
+              <button onclick="askDeleteKpi('${core.KPI_ID}')" class="bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 p-1 px-2 rounded font-bold" title="ลบอย่างถาวร"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function editKpiCore(kpiId) {
+      const core = kpiCoreData.find(c => c.KPI_ID === kpiId);
+      if (core) {
+        document.getElementById("kpiFormId").value = core.KPI_ID;
+        document.getElementById("kpiFormName").value = core.KPI_Name;
+        document.getElementById("kpiFormStrategy").value = core.Strategy;
+        document.getElementById("kpiFormTarget").value = core.Global_Target_Percent;
+        document.getElementById("kpiFormWeight").value = core.Weight;
+        document.getElementById("kpiFormNum").value = core.Numerator_Desc;
+        document.getElementById("kpiFormDen").value = core.Denominator_Desc;
+        
+        document.getElementById("kpiFormTitle").textContent = "แก้ไขข้อมูลตัวชี้วัดดั้งเดิม";
+        showToast(`กำลังแก้ไขตัวชี้วัด ${kpiId}`, "info");
+      }
+    }
+
+    function resetKpiForm() {
+      document.getElementById("kpiForm").reset();
+      document.getElementById("kpiFormId").value = "";
+      document.getElementById("kpiFormTitle").textContent = "เพิ่ม / แก้ไข ตัวชี้วัดหลัก";
+    }
+
+    async function handleKpiSubmit(e) {
+      e.preventDefault();
+      
+      const payload = {
+        KPI_ID: document.getElementById("kpiFormId").value,
+        KPI_Name: document.getElementById("kpiFormName").value.trim(),
+        Strategy: document.getElementById("kpiFormStrategy").value,
+        Global_Target_Percent: parseFloat(document.getElementById("kpiFormTarget").value),
+        Weight: parseFloat(document.getElementById("kpiFormWeight").value),
+        Numerator_Desc: document.getElementById("kpiFormNum").value.trim(),
+        Denominator_Desc: document.getElementById("kpiFormDen").value.trim()
+      };
+
+      const success = await writeDatabase("saveCoreKpi", payload);
+      if (success) {
+        resetKpiForm();
+      }
+    }
+
+    function askDeleteKpi(kpiId) {
+      openDeleteModal(`ต้องการลบตัวชี้วัดหลักรหัส ${kpiId} ใช่หรือไม่? ซึ่งจะมีผลให้คะแนนประเมินร่วมของทุกหน่วยงานถูกลบออกไปด้วยทั้งหมดทันที!`, async () => {
+        const success = await writeDatabase("deleteKpi", { KPI_ID: kpiId });
+        if (success) {
+          closeDeleteModal();
+        }
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // 9. VIEW 5: HOSPITALS & STAFF SETTINGS (หน่วยงานและบุคลากร)
+    // --------------------------------------------------------------------------
+    
+    // --- ฟังก์ชันการจัดการหน่วยงาน (Hospitals Management) ---
+    
+    function renderHospitalSettings() {
+      const tbody = document.getElementById("hospitalListTableBody");
+      tbody.innerHTML = "";
+
+      if (HOSPITALS.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">ยังไม่มีรายชื่อหน่วยงานในระบบ</td></tr>`;
+        return;
+      }
+
+      HOSPITALS.forEach((hosp, index) => {
+        // นับจำนวนเจ้าหน้าที่ในหน่วยงานนี้
+        const staffCount = staffData.filter(s => s.Hospital_Name === hosp).length;
+        // นับจำนวน KPI ของโรงพยาบาลนี้
+        const kpiCount = kpiHospitalsData.filter(k => k.Hospital_Name === hosp).length;
+
+        const row = document.createElement("tr");
+        row.className = "hover:bg-slate-50 transition-all border-b border-slate-100";
+        row.innerHTML = `
+          <td class="py-3 px-3 font-semibold text-slate-500">${index + 1}</td>
+          <td class="py-3 px-3 font-bold text-slate-800">${hosp}</td>
+          <td class="py-3 px-3 text-center font-semibold text-slate-600">${staffCount} คน</td>
+          <td class="py-3 px-3 text-center font-semibold text-emerald-600">${kpiCount} ข้อ</td>
+          <td class="py-3 px-3 text-right">
+            <div class="flex justify-end gap-1.5">
+              <button onclick="editHospital('${hosp}')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 p-1 px-2 rounded font-bold" title="แก้ไข"><i class="fa-solid fa-pencil"></i></button>
+              <button onclick="askDeleteHospital('${hosp}')" class="bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 p-1 px-2 rounded font-bold" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function editHospital(name) {
+      document.getElementById("hospitalOldName").value = name;
+      document.getElementById("hospitalNameInput").value = name;
+      document.getElementById("hospitalFormTitle").textContent = "แก้ไขข้อมูลหน่วยงาน";
+      showToast(`กำลังแก้ไขหน่วยงาน: ${name}`, "info");
+    }
+
+    function resetHospitalForm() {
+      document.getElementById("hospitalForm").reset();
+      document.getElementById("hospitalOldName").value = "";
+      document.getElementById("hospitalFormTitle").textContent = "เพิ่ม / แก้ไข หน่วยงาน";
+    }
+
+    async function handleHospitalSubmit(e) {
+      e.preventDefault();
+      
+      const oldName = document.getElementById("hospitalOldName").value.trim();
+      const newName = document.getElementById("hospitalNameInput").value.trim();
+
+      if (!newName) return;
+
+      if (oldName) {
+        // แก้ไขชื่อเดิม
+        const index = HOSPITALS.indexOf(oldName);
+        if (index !== -1) {
+          HOSPITALS[index] = newName;
+          
+          // เปลี่ยนชื่อสังกัดของเจ้าหน้าที่ที่มีอยู่เดิม
+          staffData.forEach(stf => {
+            if (stf.Hospital_Name === oldName) {
+              stf.Hospital_Name = newName;
+            }
+          });
+
+          // เปลี่ยนชื่อโรงพยาบาลในตารางผลงาน KPI ของโรงพยาบาล
+          kpiHospitalsData.forEach(kh => {
+            if (kh.Hospital_Name === oldName) {
+              kh.Hospital_Name = newName;
+            }
+          });
+
+          showToast(`เปลี่ยนชื่อหน่วยงานจาก ${oldName} เป็น ${newName} เรียบร้อย`, "success");
+        }
+      } else {
+        // เพิ่มหน่วยงานใหม่
+        if (HOSPITALS.includes(newName)) {
+          showToast("มีชื่อหน่วยงานนี้อยู่ในระบบแล้ว", "danger");
+          return;
+        }
+
+        HOSPITALS.push(newName);
+
+        // กระจาย Core KPI ทั้งหมดผูกกับหน่วยงานใหม่นี้ด้วย เพื่อความพร้อมในการประเมิน
+        let hospCounter = kpiHospitalsData.length + 1;
+        kpiCoreData.forEach(core => {
+          kpiHospitalsData.push({
+            Hosp_KPI_ID: "HKPI-" + String(hospCounter++).padStart(4, '0'),
+            KPI_ID: core.KPI_ID,
+            Hospital_Name: newName,
+            Target_Percent: core.Global_Target_Percent,
+            Numerator_Value: 0,
+            Denominator_Value: 1,
+            Actual_Percent: 0,
+            Weight_Score: 0,
+            Evaluator_Name: "ระบบเพิ่มใหม่อัตโนมัติ",
+            Last_Updated: new Date().toISOString()
+          });
+        });
+
+        showToast(`เพิ่มหน่วยงาน ${newName} และเชื่อมโยงเป้าหมาย KPI สำเร็จ`, "success");
+      }
+
+      // บันทึกความก้าวหน้าหน่วยงานใน LocalStorage ชั่วคราวกรณี sandbox
+      localStorage.setItem("koo_kaew_hospitals_list", JSON.stringify(HOSPITALS));
+
+      resetHospitalForm();
+      rebuildAllViews();
+    }
+
+    function askDeleteHospital(name) {
+      openDeleteModal(`ต้องการลบหน่วยงาน "${name}" หรือไม่? การลบนี้จะส่งผลให้ ประวัติการประเมินผล KPI ทั้งหมด และข้อมูลสังกัดของบุคลากรของหน่วยงานนี้หายไปทันที!`, () => {
+        // ดำเนินการลบ
+        HOSPITALS = HOSPITALS.filter(h => h !== name);
+        localStorage.setItem("koo_kaew_hospitals_list", JSON.stringify(HOSPITALS));
+
+        // ลบ KPI ที่ผูกมัด
+        kpiHospitalsData = kpiHospitalsData.filter(k => k.Hospital_Name !== name);
+
+        // ลบข้อมูลเจ้าหน้าที่ในหน่วยงานนี้ หรือตั้งค่าสังกัดให้ว่าง
+        staffData = staffData.filter(s => s.Hospital_Name !== name);
+
+        showToast(`ลบหน่วยงาน ${name} และข้อมูลระบบประเมินที่เกี่ยวข้องทั้งหมดแล้ว`, "warning");
+        closeDeleteModal();
+        rebuildAllViews();
+      });
+    }
+
+    // --- ฟังก์ชันเจ้าหน้าที่ (Staff Management) ---
+
+    function renderStaffSettings() {
+      const tbody = document.getElementById("staffListTableBody");
+      tbody.innerHTML = "";
+
+      if (staffData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">ยังไม่มีรายชื่อบุคลากรที่ลงทะเบียนไว้</td></tr>`;
+        return;
+      }
+
+      staffData.forEach(stf => {
+        const row = document.createElement("tr");
+        row.className = "hover:bg-slate-50 transition-all border-b border-slate-100";
+        row.innerHTML = `
+          <td class="py-3 px-3 font-bold text-slate-900">${stf.Staff_ID}</td>
+          <td class="py-3 px-3">
+            <div class="font-bold text-slate-800">${stf.Name}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">${stf.Position} ${stf.Email ? '• ' + stf.Email : ''}</div>
+          </td>
+          <td class="py-3 px-3 font-semibold text-slate-600">${stf.Hospital_Name}</td>
+          <td class="py-3 px-3 text-center">
+            <span class="bg-slate-100 text-slate-800 font-bold px-2.5 py-0.5 rounded text-[10px]">
+              ${stf.Role}
+            </span>
+          </td>
+          <td class="py-3 px-3 text-right">
+            <div class="flex justify-end gap-1.5">
+              <button onclick="editStaff('${stf.Staff_ID}')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 p-1 px-2 rounded font-bold" title="แก้ไข"><i class="fa-solid fa-user-pen"></i></button>
+              <button onclick="askDeleteStaff('${stf.Staff_ID}')" class="bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 p-1 px-2 rounded font-bold" title="ลบ"><i class="fa-solid fa-trash animate-pulse"></i></button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function editStaff(staffId) {
+      const stf = staffData.find(s => s.Staff_ID === staffId);
+      if (stf) {
+        document.getElementById("staffFormId").value = stf.Staff_ID;
+        document.getElementById("staffFormName").value = stf.Name;
+        document.getElementById("staffFormHosp").value = stf.Hospital_Name;
+        document.getElementById("staffFormPos").value = stf.Position;
+        document.getElementById("staffFormRole").value = stf.Role;
+        document.getElementById("staffFormEmail").value = stf.Email || "";
+        
+        document.getElementById("staffFormTitle").textContent = "ปรับปรุงข้อมูลบุคลากร";
+      }
+    }
+
+    function resetStaffForm() {
+      document.getElementById("staffForm").reset();
+      document.getElementById("staffFormId").value = "";
+      document.getElementById("staffFormTitle").textContent = "บันทึกประวัติ / ลงทะเบียนบุคลากร";
+    }
+
+    async function handleStaffSubmit(e) {
+      e.preventDefault();
+      
+      const payload = {
+        Staff_ID: document.getElementById("staffFormId").value,
+        Name: document.getElementById("staffFormName").value.trim(),
+        Hospital_Name: document.getElementById("staffFormHosp").value,
+        Position: document.getElementById("staffFormPos").value.trim(),
+        Role: document.getElementById("staffFormRole").value,
+        Email: document.getElementById("staffFormEmail").value.trim()
+      };
+
+      const success = await writeDatabase("saveStaff", payload);
+      if (success) {
+        resetStaffForm();
+      }
+    }
+
+    function askDeleteStaff(staffId) {
+      openDeleteModal(`ต้องการถอนรายชื่อบุคลากรรหัส ${staffId} ออกจากบัญชีหรือไม่?`, async () => {
+        const success = await writeDatabase("deleteStaff", { Staff_ID: staffId });
+        if (success) {
+          closeDeleteModal();
+        }
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // 10. VIEW 6: REPORTS & EXPORT GENERATION
+    // --------------------------------------------------------------------------
+    function renderReportView() {
+      const records = getFilteredHospitalKpiRecords();
+      const tbody = document.getElementById("reportTableRows");
+      
+      tbody.innerHTML = "";
+
+      let scopeLabel = "คปสอ.กู่แก้ว (ภาพรวมทั้งหมด)";
+      if (appConfig.scopeHospital !== "ALL") {
+        scopeLabel = `หน่วยงาน/รพ.สต. ที่รับผิดชอบ: ${appConfig.scopeHospital}`;
+      }
+      if (appConfig.scopeStaff !== "ALL") {
+        scopeLabel += ` / ผู้รับผิดชอบ: ${appConfig.scopeStaff}`;
+      }
+      document.getElementById("reportSelectedUnit").textContent = scopeLabel;
+
+      let passedCount = 0;
+      let totalWeightScore = 0;
+      let maxWeightPossible = 0;
+
+      kpiCoreData.forEach(core => {
+        const filteredRecords = records.filter(r => r.KPI_ID === core.KPI_ID);
+        if (filteredRecords.length === 0) return;
+
+        const avgActual = filteredRecords.reduce((acc, curr) => acc + curr.Actual_Percent, 0) / filteredRecords.length;
+        const totalNumerator = filteredRecords.reduce((acc, curr) => acc + curr.Numerator_Value, 0);
+        const totalDenominator = filteredRecords.reduce((acc, curr) => acc + curr.Denominator_Value, 0);
+
+        const isPassed = avgActual >= core.Global_Target_Percent;
+        if (isPassed) passedCount++;
+        
+        totalWeightScore += (avgActual / 100) * core.Weight;
+        maxWeightPossible += core.Weight;
+
+        const row = document.createElement("tr");
+        row.className = "border-b border-slate-200 text-slate-800";
+        row.innerHTML = `
+          <td class="py-2 px-3 border-r border-slate-200 font-bold">${core.KPI_ID}</td>
+          <td class="py-2 px-3 border-r border-slate-200">
+            <div class="font-bold">${core.KPI_Name}</div>
+            <p class="text-[9px] text-slate-500 mt-0.5">${core.Strategy}</p>
+          </td>
+          <td class="py-2 px-3 border-r border-slate-200 text-center font-bold">${core.Global_Target_Percent}%</td>
+          <td class="py-2 px-3 border-r border-slate-200 text-center">
+            <span class="font-extrabold">${avgActual.toFixed(1)}%</span> 
+            <span class="text-[10px] text-slate-500">(${totalNumerator}/${totalDenominator})</span>
+          </td>
+          <td class="py-2 px-3 text-center font-bold ${isPassed ? 'text-emerald-700' : 'text-rose-700'}">
+            ${isPassed ? 'ผ่าน' : 'ไม่ผ่าน'}
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      const successRate = maxWeightPossible > 0 ? (totalWeightScore / maxWeightPossible) * 100 : 0;
+      
+      document.getElementById("reportTotalKpis").textContent = kpiCoreData.length;
+      document.getElementById("reportPassedKpis").textContent = passedCount;
+      document.getElementById("reportAvgScore").textContent = `${successRate.toFixed(1)}%`;
+    }
+
+    function printReport() {
+      window.print();
+    }
+
+    function exportToCSV() {
+      const records = getFilteredHospitalKpiRecords();
+      let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+      
+      csvContent += "รหัส KPI,ชื่อดัชนีชี้วัด,สังกัดหน่วยงาน,เป้าหมายร่วม(%),ผลงาน(ตัวตั้ง),เป้าหมาย(ตัวหาร),ร้อยละความสำเร็จ,คะแนนที่ได้,ผู้รายงานผล,วันที่อัปเดตล่าสุด\r\n";
+      
+      records.forEach(rec => {
+        const core = kpiCoreData.find(c => c.KPI_ID === rec.KPI_ID);
+        if (core) {
+          const row = [
+            `"${rec.KPI_ID}"`,
+            `"${core.KPI_Name.replace(/"/g, '""')}"`,
+            `"${rec.Hospital_Name}"`,
+            `"${rec.Target_Percent}"`,
+            `"${rec.Numerator_Value}"`,
+            `"${rec.Denominator_Value}"`,
+            `"${rec.Actual_Percent}"`,
+            `"${rec.Weight_Score}"`,
+            `"${rec.Evaluator_Name}"`,
+            `"${rec.Last_Updated}"`
+          ].join(",");
+          csvContent += row + "\r\n";
+        }
+      });
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      
+      const dateStr = new Date().toISOString().split('T')[0];
+      link.setAttribute("download", `KPI_KooKaew_Assessment_Report_${dateStr}.csv`);
+      document.body.appendChild(link);
+      
+      link.click();
+      document.body.removeChild(link);
+      showToast("ส่งออกไฟล์ CSV สำหรับเปิดบน Excel เรียบร้อยแล้ว", "success");
+    }
+
+    // --------------------------------------------------------------------------
+    // 11. INTERFACES MODALS & DYNAMIC EFFECTS
+    // --------------------------------------------------------------------------
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-pane").forEach(pane => pane.classList.add("hidden"));
+      document.querySelectorAll(".nav-tab").forEach(tab => {
+        tab.classList.remove("active", "text-emerald-700", "bg-emerald-50", "border-b-2", "border-emerald-600");
+        tab.classList.add("text-slate-600");
+      });
+
+      const activePane = document.getElementById(`pane-${tabId}`);
+      if (activePane) activePane.classList.remove("hidden");
+
+      const activeTab = document.getElementById(`tab-${tabId}`);
+      if (activeTab) {
+        activeTab.classList.add("active", "text-emerald-700", "bg-emerald-50", "border-b-2", "border-emerald-600");
+        activeTab.classList.remove("text-slate-600");
+      }
+    }
+
+    function toggleApiModal() {
+      const modal = document.getElementById("apiConfigModal");
+      modal.classList.toggle("hidden");
+    }
+
+    function saveApiConfig() {
+      const val = document.getElementById("gasUrlInput").value.trim();
+      if (val) {
+        localStorage.setItem("koo_kaew_gas_url", val);
+        appConfig.gasApiUrl = val;
+        updateConnectionUI(true);
+      } else {
+        localStorage.removeItem("koo_kaew_gas_url");
+        appConfig.gasApiUrl = "";
+        updateConnectionUI(false);
+      }
+      toggleApiModal();
+      fetchDatabase();
+    }
+
+    function updateConnectionUI(isConnected) {
+      const statusDiv = document.getElementById("connStatus");
+      if (isConnected) {
+        statusDiv.className = "bg-emerald-600/30 text-emerald-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-emerald-500/20 flex items-center gap-1.5";
+        statusDiv.innerHTML = `<i class="fa-solid fa-link"></i> <span>Sheets Database Live</span>`;
+      } else {
+        statusDiv.className = "bg-blue-600/30 text-blue-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-blue-500/20 flex items-center gap-1.5";
+        statusDiv.innerHTML = `<i class="fa-solid fa-cloud"></i> <span>In-Memory Sandbox</span>`;
+      }
+    }
+
+    function handleScopeChange() {
+      const hosp = document.getElementById("scopeHospital").value;
+      const staff = document.getElementById("scopeStaff").value;
+      
+      appConfig.scopeHospital = hosp;
+      appConfig.scopeStaff = staff;
+
+      const alertDiv = document.getElementById("filterAlert");
+      const alertText = document.getElementById("filterAlertText");
+
+      if (hosp !== "ALL" || staff !== "ALL") {
+        alertDiv.classList.remove("hidden");
+        let info = [];
+        if (hosp !== "ALL") info.push(`หน่วยงาน: ${hosp}`);
+        if (staff !== "ALL") info.push(`ผู้รับผิดชอบ: ${staff}`);
+        alertText.textContent = info.join(" | ");
+      } else {
+        alertDiv.classList.add("hidden");
+      }
+
+      rebuildAllViews();
+    }
+
+    function clearScopeFilter() {
+      document.getElementById("scopeHospital").value = "ALL";
+      document.getElementById("scopeStaff").value = "ALL";
+      appConfig.scopeHospital = "ALL";
+      appConfig.scopeStaff = "ALL";
+      
+      document.getElementById("filterAlert").classList.add("hidden");
+      rebuildAllViews();
+    }
+
+    function openEvalModal(hospKpiId) {
+      const record = kpiHospitalsData.find(r => r.Hosp_KPI_ID === hospKpiId);
+      if (!record) return;
+
+      const core = kpiCoreData.find(c => c.KPI_ID === record.KPI_ID);
+      if (!core) return;
+
+      document.getElementById("evalHospKpiId").value = record.Hosp_KPI_ID;
+      document.getElementById("evalModalHospitalName").textContent = record.Hospital_Name;
+      document.getElementById("evalModalKpiName").textContent = `${record.KPI_ID}: ${core.KPI_Name}`;
+      document.getElementById("evalModalTargetText").textContent = `เป้าหมายร่วม ${core.Global_Target_Percent}% (ค่าน้ำหนักคะแนน ${core.Weight})`;
+      
+      document.getElementById("evalNumInput").value = record.Numerator_Value;
+      document.getElementById("evalDenInput").value = record.Denominator_Value;
+      
+      // บังคับกรอกชื่อผู้บันทึกเป็นชื่อของพนักงานที่ล็อกอินอยู่จริง
+      const user = staffData.find(s => s.Staff_ID === appConfig.currentUserId);
+      document.getElementById("evalEvaluatorInput").value = user ? user.Name : "ผู้บันทึก";
+
+      document.getElementById("evalModalNumLabel").textContent = `${core.Numerator_Desc} *`;
+      document.getElementById("evalModalDenLabel").textContent = `${core.Denominator_Desc} *`;
+
+      calculateModalRate();
+
+      document.getElementById("evalNumInput").oninput = calculateModalRate;
+      document.getElementById("evalDenInput").oninput = calculateModalRate;
+
+      document.getElementById("evalRecordModal").classList.remove("hidden");
+    }
+
+    function calculateModalRate() {
+      const num = parseFloat(document.getElementById("evalNumInput").value) || 0;
+      const den = parseFloat(document.getElementById("evalDenInput").value) || 1;
+      const calculated = ((num / den) * 100).toFixed(2);
+      document.getElementById("evalCalculatedRate").textContent = `${calculated}%`;
+    }
+
+    function toggleEvalModal() {
+      document.getElementById("evalRecordModal").classList.add("hidden");
+    }
+
+    async function submitEvalForm(e) {
+      e.preventDefault();
+      
+      const payload = {
+        Hosp_KPI_ID: document.getElementById("evalHospKpiId").value,
+        Numerator_Value: parseFloat(document.getElementById("evalNumInput").value) || 0,
+        Denominator_Value: parseFloat(document.getElementById("evalDenInput").value) || 1,
+        Evaluator_Name: document.getElementById("evalEvaluatorInput").value.trim()
+      };
+
+      const success = await writeDatabase("updateEvaluation", payload);
+      if (success) {
+        toggleEvalModal();
+      }
+    }
+
+    function openDeleteModal(message, callback) {
+      document.getElementById("confirmDeleteDetail").textContent = message;
+      document.getElementById("confirmDeleteModal").classList.remove("hidden");
+      deleteCallback = callback;
+      
+      document.getElementById("confirmDeleteBtn").onclick = function() {
+        if (deleteCallback) deleteCallback();
+      }
+    }
+
+    function closeDeleteModal() {
+      document.getElementById("confirmDeleteModal").classList.add("hidden");
+      deleteCallback = null;
+    }
+
+    function showToast(message, type = "success") {
+      const container = document.getElementById("toastContainer");
+      
+      let bgClass = "bg-emerald-600 border-emerald-500 text-white shadow-emerald-200";
+      let icon = "fa-circle-check";
+      
+      if (type === "warning") {
+        bgClass = "bg-amber-500 border-amber-400 text-white shadow-amber-200";
+        icon = "fa-triangle-exclamation";
+      } else if (type === "danger") {
+        bgClass = "bg-rose-600 border-rose-500 text-white shadow-rose-200";
+        icon = "fa-circle-exclamation";
+      } else if (type === "info") {
+        bgClass = "bg-slate-800 border-slate-700 text-white shadow-slate-200";
+        icon = "fa-circle-info";
+      }
+
+      const div = document.createElement("div");
+      div.className = `flex items-center gap-3 p-4 rounded-xl border shadow-lg ${bgClass} transition-all duration-350 translate-y-2 opacity-0`;
+      div.innerHTML = `
+        <i class="fa-solid ${icon} text-lg"></i>
+        <div class="text-xs font-bold leading-normal">${message}</div>
+      `;
+
+      container.appendChild(div);
+
+      setTimeout(() => {
+        div.classList.remove("translate-y-2", "opacity-0");
+      }, 10);
+
+      setTimeout(() => {
+        div.classList.add("translate-y-2", "opacity-0");
+        setTimeout(() => {
+          container.removeChild(div);
+        }, 350);
+      }, 4000);
+    }
+  </script>
+</body>
+</html>
