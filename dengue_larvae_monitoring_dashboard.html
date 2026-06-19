@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเฝ้าระวังลูกน้ำยุงลายและประเมินความเสี่ยงโรคไข้เลือดออก</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Sarabun & Prompt) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Prompt', 'Sarabun', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-gradient-to-r from-blue-700 via-teal-600 to-emerald-500 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-white p-2.5 rounded-full text-teal-600 shadow-md">
+                    <i class="fa-solid fa-mosquito-net text-2xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight">ระบบเฝ้าระวังและวิเคราะห์ความเสี่ยงลูกน้ำยุงลาย</h1>
+                    <p class="text-xs text-teal-100">แดชบอร์ดอัจฉริยะวิเคราะห์ความเสี่ยงระดับครัวเรือน หมู่บ้าน และตำบล</p>
+                </div>
+            </div>
+            
+            <!-- Connection Status -->
+            <div class="flex items-center gap-2 text-sm bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+                <span class="relative flex h-3 w-3">
+                    <span id="connection-pulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span id="connection-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span id="connection-status" class="font-medium text-white">ระบบออฟไลน์ (โหมดจำลองข้อมูล)</span>
+                <button onclick="toggleConnectionMode()" class="ml-2 text-xs bg-white text-teal-700 px-2.5 py-1 rounded-md hover:bg-teal-50 transition font-bold shadow-sm">
+                    ตั้งค่าเชื่อมต่อ
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-slate-200 overflow-x-auto gap-2">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-6 py-3 border-b-2 border-teal-600 text-teal-600 font-bold whitespace-nowrap flex items-center gap-2 transition tab-btn">
+                <i class="fa-solid fa-chart-line"></i> แดชบอร์ดภาพรวมและการวิเคราะห์
+            </button>
+            <button onclick="switchTab('map-view')" id="tab-map-view" class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 font-semibold whitespace-nowrap flex items-center gap-2 transition tab-btn">
+                <i class="fa-solid fa-map-location-dot"></i> แผนที่ความเสี่ยง (Google Maps)
+            </button>
+            <button onclick="switchTab('data-entry')" id="tab-data-entry" class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 font-semibold whitespace-nowrap flex items-center gap-2 transition tab-btn">
+                <i class="fa-solid fa-edit"></i> บันทึกข้อมูลและประเมิน
+            </button>
+            <button onclick="switchTab('data-management')" id="tab-data-management" class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 font-semibold whitespace-nowrap flex items-center gap-2 transition tab-btn">
+                <i class="fa-solid fa-table"></i> จัดการฐานข้อมูลและแอดมิน
+            </button>
+        </div>
+
+        <!-- 1. DASHBOARD TAB -->
+        <section id="content-dashboard" class="space-y-6 tab-content">
+            <!-- Filter Controls -->
+            <div class="glass-morphism p-4 rounded-2xl shadow-sm flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex flex-wrap gap-3 items-center">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-semibold text-slate-600">กรองตำบล:</label>
+                        <select id="filter-subdistrict" onchange="applyFilters()" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-teal-500 focus:border-teal-500">
+                            <option value="ทั้งหมด">ทั้งหมด</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-semibold text-slate-600">กรองหมู่บ้าน:</label>
+                        <select id="filter-village" onchange="applyFilters()" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-teal-500 focus:border-teal-500">
+                            <option value="ทั้งหมด">ทั้งหมด</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                    <i class="fa-solid fa-clock-rotate-left mr-1"></i> อัปเดตข้อมูลล่าสุด: <span id="last-update-time">-</span>
+                </div>
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- KPI 1: Total Inspected Households -->
+                <div class="bg-gradient-to-br from-white to-slate-50 p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 tracking-wider uppercase">ครัวเรือนที่สำรวจ</p>
+                        <h3 id="kpi-total-inspected" class="text-3xl font-extrabold text-slate-900 mt-1">0</h3>
+                        <p class="text-xs text-slate-400 mt-1">หลังคาเรือนทั้งหมด</p>
+                    </div>
+                    <div class="p-3 bg-blue-100 text-blue-600 rounded-xl">
+                        <i class="fa-solid fa-house-medical text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- KPI 2: HI (House Index) -->
+                <div class="bg-gradient-to-br from-white to-slate-50 p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 tracking-wider uppercase">ดัชนีชี้วัด HI (เป้าหมาย &lt; 10%)</p>
+                        <h3 id="kpi-hi-index" class="text-3xl font-extrabold text-rose-600 mt-1">0.0%</h3>
+                        <span id="kpi-hi-badge" class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full">กำลังประเมิน</span>
+                    </div>
+                    <div class="p-3 bg-rose-100 text-rose-600 rounded-xl">
+                        <i class="fa-solid fa-percent text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- KPI 3: CI (Container Index) -->
+                <div class="bg-gradient-to-br from-white to-slate-50 p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 tracking-wider uppercase">ดัชนีชี้วัด CI (เป้าหมาย &lt; 5%)</p>
+                        <h3 id="kpi-ci-index" class="text-3xl font-extrabold text-amber-500 mt-1">0.0%</h3>
+                        <span id="kpi-ci-badge" class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full">กำลังประเมิน</span>
+                    </div>
+                    <div class="p-3 bg-amber-100 text-amber-500 rounded-xl">
+                        <i class="fa-solid fa-bucket text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- KPI 4: High Risk Villages Count -->
+                <div class="bg-gradient-to-br from-white to-slate-50 p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 tracking-wider uppercase">พื้นที่เสี่ยงควบคุมโรค</p>
+                        <h3 id="kpi-high-risk-count" class="text-3xl font-extrabold text-red-600 mt-1">0</h3>
+                        <p class="text-xs text-rose-500 mt-1 font-semibold" id="kpi-risk-text">หมู่บ้านที่มีความเสี่ยงสูง</p>
+                    </div>
+                    <div class="p-3 bg-red-100 text-red-600 rounded-xl">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Dashboard Charts and Risk Analysis -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Chart 1: HI & CI Index by Village -->
+                <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-chart-bar text-teal-600"></i> ดัชนีความชุกของลูกน้ำยุงลายรายหมู่บ้าน (HI & CI)
+                        </h4>
+                        <span class="text-xs text-slate-500 bg-teal-50 text-teal-800 px-2 py-1 rounded">มาตรฐานควบคุมโรค</span>
+                    </div>
+                    <div class="h-80 relative">
+                        <canvas id="chart-index-comparison"></canvas>
+                    </div>
+                </div>
+
+                <!-- Risk breakdown (CI criteria dashboard) -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                    <h4 class="font-bold text-slate-800 text-base mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-shield-virus text-teal-600"></i> สัดส่วนความเสี่ยง (Household Risk)
+                    </h4>
+                    <div class="h-48 relative mb-4 flex justify-center">
+                        <canvas id="chart-risk-pie" class="max-w-[200px]"></canvas>
+                    </div>
+                    <div class="space-y-2 mt-auto">
+                        <div class="flex justify-between items-center text-xs border-b pb-1.5">
+                            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span>เสี่ยงสูง (HI ≥ 10% หรือ CI ≥ 5%)</span>
+                            <span id="risk-count-high" class="font-bold text-red-600">0 ครัวเรือน</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs border-b pb-1.5">
+                            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400"></span>เสี่ยงปานกลาง (มีลูกน้ำแต่ต่ำกว่าเกณฑ์)</span>
+                            <span id="risk-count-medium" class="font-bold text-amber-600">0 ครัวเรือน</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span>เสี่ยงต่ำ (ไม่พบลูกน้ำยุงลายเลย)</span>
+                            <span id="risk-count-low" class="font-bold text-emerald-600">0 ครัวเรือน</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Analysis Table (By Village & Subdistrict Summary) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-magnifying-glass-chart text-teal-600"></i> ตารางวิเคราะห์มาตรฐานควบคุมโรค (แยกรายตำบล/หมู่บ้าน)
+                        </h4>
+                        <p class="text-xs text-slate-500 mt-1">วิเคราะห์เกณฑ์ควบคุมโรค (เกณฑ์ผ่าน: HI &lt; 10%, CI &lt; 5%)</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">ตำบล</th>
+                                <th class="px-6 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">หมู่บ้าน</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">บ้านที่สำรวจ (หลัง)</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">พบลูกน้ำ (หลัง)</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">HI (%)</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">ภาชนะทั้งหมด (ชิ้น)</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">พบลูกน้ำ (ชิ้น)</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">CI (%)</th>
+                                <th class="px-6 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">สถานะประเมิน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-summary-body" class="bg-white divide-y divide-slate-200">
+                            <!-- Summary Rows generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. GOOGLE MAP TAB -->
+        <section id="content-map-view" class="space-y-6 tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Map Sidebar: List of Infested Houses -->
+                <div class="lg:col-span-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[600px]">
+                    <div class="mb-3">
+                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-location-crosshairs text-red-500"></i> ครัวเรือนที่พบลูกน้ำยุงลาย
+                        </h4>
+                        <p class="text-xs text-slate-500 mt-1">คลิกบ้านเลขที่เพื่อดูตำแหน่งในแผนที่</p>
+                    </div>
+                    <!-- Inspected list filter -->
+                    <input type="text" id="map-search-input" onkeyup="filterMapSidebar()" placeholder="ค้นหา บ้านเลขที่/เจ้าบ้าน..." class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500 mb-3">
+                    
+                    <div id="infested-house-list" class="flex-grow overflow-y-auto space-y-2 pr-1 text-xs">
+                        <!-- Dynamic infested list items -->
+                    </div>
+                </div>
+
+                <!-- Google Maps Embed Container -->
+                <div class="lg:col-span-3 flex flex-col h-[600px] bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
+                    <!-- Legend Overlay inside Map -->
+                    <div class="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur shadow-md rounded-xl p-3 text-xs border border-slate-200 flex flex-col gap-1.5 max-w-[200px]">
+                        <h5 class="font-bold text-slate-800 mb-1">คำอธิบายแผนที่</h5>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-red-600 block shadow-inner"></span>
+                            <span>พบลูกน้ำยุงลาย (เสี่ยงสูง)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 block shadow-inner"></span>
+                            <span>ไม่พบลูกน้ำยุงลาย (เสี่ยงต่ำ)</span>
+                        </div>
+                    </div>
+                    
+                    <!-- The actual Google Maps Container -->
+                    <div id="google-map-canvas" class="w-full h-full bg-slate-100">
+                        <!-- If Map script loading fails or is pending, show loading state -->
+                        <div class="flex flex-col items-center justify-center h-full gap-3 text-slate-500">
+                            <i class="fa-solid fa-spinner animate-spin text-3xl"></i>
+                            <p class="text-sm font-semibold">กำลังโหลดแผนที่ Google Maps...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. DATA ENTRY & ASSESSMENT TAB -->
+        <section id="content-data-entry" class="space-y-6 tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Survey Form -->
+                <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-teal-600 to-emerald-500 text-white p-5">
+                        <h4 class="font-bold text-lg flex items-center gap-2">
+                            <i class="fa-solid fa-file-invoice text-white"></i> แบบฟอร์มบันทึกผลการสำรวจและประเมินดัชนี
+                        </h4>
+                        <p class="text-xs text-teal-100 mt-1">กรอกข้อมูลการสำรวจรายครัวเรือนเพื่อคำนวณและประเมินผลความเสี่ยงทันที</p>
+                    </div>
+
+                    <form id="larvae-survey-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-6">
+                        <!-- Hidden form element for tracking edit ID -->
+                        <input type="hidden" id="entry-row-id" value="">
+
+                        <!-- Basic Information -->
+                        <div>
+                            <h5 class="font-bold text-slate-700 text-sm border-b pb-1.5 mb-4 flex items-center gap-2">
+                                <span class="bg-teal-100 text-teal-800 text-xs px-2 py-0.5 rounded-full">1</span> ข้อมูลครัวเรือน
+                            </h5>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">ตำบล <span class="text-red-500">*</span></label>
+                                    <input type="text" id="form-subdistrict" required placeholder="เช่น หนองพระ" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">หมู่ที่ / ชื่อหมู่บ้าน <span class="text-red-500">*</span></label>
+                                    <input type="text" id="form-village" required placeholder="เช่น หมู่ 1 บ้านหนองโพธิ์" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">บ้านเลขที่ <span class="text-red-500">*</span></label>
+                                    <input type="text" id="form-house-number" required placeholder="เช่น 123/4" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">ชื่อ-นามสกุล เจ้าบ้าน <span class="text-red-500">*</span></label>
+                                    <input type="text" id="form-head-name" required placeholder="เช่น นายสมชาย ดีใจ" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">พิกัดละติจูด (Latitude) <span class="text-red-500">*</span></label>
+                                    <input type="number" step="any" id="form-lat" required placeholder="เช่น 17.407" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">พิกัดลองจิจูด (Longitude) <span class="text-red-500">*</span></label>
+                                    <input type="number" step="any" id="form-lng" required placeholder="เช่น 102.798" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none">
+                                </div>
+                            </div>
+                            <div class="mt-2 text-right">
+                                <button type="button" onclick="getCurrentLocation()" class="text-xs text-teal-600 hover:text-teal-800 font-bold flex items-center justify-end gap-1 ml-auto">
+                                    <i class="fa-solid fa-location-dot"></i> ค้นหาตำแหน่งปัจจุบันของฉัน (GPS)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Containers Inspected -->
+                        <div>
+                            <h5 class="font-bold text-slate-700 text-sm border-b pb-1.5 mb-4 flex items-center gap-2">
+                                <span class="bg-teal-100 text-teal-800 text-xs px-2 py-0.5 rounded-full">2</span> รายละเอียดภาชนะที่พบลูกน้ำยุงลาย
+                            </h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <h6 class="font-semibold text-xs text-slate-600 mb-3 uppercase tracking-wider">ภาชนะน้ำใช้ (ภายในและภายนอกอาคาร)</h6>
+                                    <div class="space-y-3 text-sm">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span>จำนวนภาชนะน้ำใช้ทั้งหมด:</span>
+                                            <input type="number" min="0" id="form-used-total" onchange="calculateAutoSurveyMetrics()" class="w-20 text-center bg-white border border-slate-300 rounded px-2 py-1" value="0">
+                                        </div>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span class="text-rose-600 font-medium">ที่พบลูกน้ำยุงลาย:</span>
+                                            <input type="number" min="0" id="form-used-infested" onchange="calculateAutoSurveyMetrics()" class="w-20 text-center bg-white border border-slate-300 rounded px-2 py-1" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <h6 class="font-semibold text-xs text-slate-600 mb-3 uppercase tracking-wider">ภาชนะอื่นๆ/ยางรถยนต์/ขยะ (รอบๆ บริเวณบ้าน)</h6>
+                                    <div class="space-y-3 text-sm">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span>จำนวนภาชนะอื่นๆ ทั้งหมด:</span>
+                                            <input type="number" min="0" id="form-other-total" onchange="calculateAutoSurveyMetrics()" class="w-20 text-center bg-white border border-slate-300 rounded px-2 py-1" value="0">
+                                        </div>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span class="text-rose-600 font-medium">ที่พบลูกน้ำยุงลาย:</span>
+                                            <input type="number" min="0" id="form-other-infested" onchange="calculateAutoSurveyMetrics()" class="w-20 text-center bg-white border border-slate-300 rounded px-2 py-1" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Realtime Evaluation Assessment Card -->
+                        <div id="survey-realtime-card" class="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-xl border border-teal-200/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-emerald-500 text-white p-2.5 rounded-full" id="survey-result-icon">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-500">ผลการประเมินความเสี่ยงทันที</span>
+                                    <h6 id="survey-result-status" class="text-base font-bold text-slate-800">เสี่ยงต่ำ (ไม่พบลูกน้ำยุงลาย)</h6>
+                                    <p id="survey-result-desc" class="text-xs text-slate-500">ผ่านเกณฑ์ควบคุมโรคไข้เลือดออก</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-slate-500">อัตราความชุกของภาชนะ (Household CI):</span>
+                                <h5 id="survey-result-ci" class="text-xl font-black text-teal-700">0.0%</h5>
+                            </div>
+                        </div>
+
+                        <!-- Notes / Actions Taken -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">บันทึกเพิ่มเติม / มาตรการควบคุมโรคที่ดำเนินการ (เช่น ทรายอะเบท, พ่นหมอกควัน)</label>
+                            <textarea id="form-notes" rows="2" placeholder="เช่น ใส่ทรายอะเบทในตุ่มน้ำรอบบ้าน และทำลายเศษภาชนะเรียบร้อยแล้ว" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none"></textarea>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="flex justify-end gap-3 pt-4 border-t">
+                            <button type="button" onclick="resetForm()" class="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 text-sm font-semibold transition">
+                                <i class="fa-solid fa-eraser mr-1"></i> ล้างข้อมูล
+                            </button>
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition flex items-center gap-2 shadow-md">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> <span id="form-submit-text">บันทึกข้อมูล</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Guidance Information Column -->
+                <div class="space-y-6">
+                    <!-- Hazard Level Information Card -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> มาตรฐานการควบคุมและพยากรณ์โรค
+                        </h4>
+                        <div class="space-y-4 text-xs">
+                            <div class="p-3 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+                                <h5 class="font-bold text-red-800">เสี่ยงสูง (High Risk)</h5>
+                                <p class="text-red-700 mt-1">เกณฑ์ HI ≥ 10% หรือ CI ≥ 5% ในหมู่บ้าน แสดงถึงมีดัชนีชุกชุมของยุงลายพร้อมต่อการแพร่กระจายเชื้อไวรัสเดงกี</p>
+                            </div>
+                            <div class="p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
+                                <h5 class="font-bold text-amber-800">เสี่ยงปานกลาง (Medium Risk)</h5>
+                                <p class="text-amber-700 mt-1">พบลูกน้ำยุงลายในระดับต่ำ มีความจำเป็นต้องใส่ทรายอะเบทหรือปรับปรุงสภาพแวดล้อมทันที</p>
+                            </div>
+                            <div class="p-3 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-lg">
+                                <h5 class="font-bold text-emerald-800">เสี่ยงต่ำ (Low Risk)</h5>
+                                <p class="text-emerald-700 mt-1">ไม่พบลูกน้ำยุงลายในภาชนะทุกประเภท (HI = 0%, CI = 0%) ยอดเยี่ยม!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Manual Actions -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-clipboard-question text-teal-600"></i> แนวทางปฏิบัติ 5ส. + 3เก็บ
+                        </h4>
+                        <ul class="space-y-2 text-xs text-slate-600 list-disc list-inside">
+                            <li><strong>เก็บบ้าน:</strong> จัดระเบียบในบ้านให้ปลอดโปร่งไม่ให้ยุงเกาะ</li>
+                            <li><strong>เก็บขยะ:</strong> ทำลายเศษภาชนะเพื่อไม่ให้ขังน้ำ</li>
+                            <li><strong>เก็บน้ำ:</strong> ปิดฝาโอ่ง ถังน้ำให้มิดชิด</li>
+                            <li>หยอดทรายอะเบท ขัดล้างคว่ำภาชนะทุก 7 วัน</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. DATABASE & ADMIN TAB -->
+        <section id="content-data-management" class="space-y-6 tab-content hidden">
+            <!-- Table actions -->
+            <div class="glass-morphism p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-semibold text-slate-600">สิทธิผู้ใช้งานปัจจุบัน:</span>
+                    <span class="bg-red-100 text-red-800 text-xs font-bold px-3 py-1 rounded-full border border-red-200">
+                        <i class="fa-solid fa-user-shield mr-1"></i> เจ้าหน้าที่สาธารณสุข / Admin (แก้ไขได้)
+                    </span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="exportDataToCSV()" class="px-3 py-1.5 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-file-csv"></i> ส่งออกข้อมูล CSV
+                    </button>
+                    <button onclick="fetchLatestDataFromSheet()" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow">
+                        <i class="fa-solid fa-rotate"></i> ดึงข้อมูลล่าสุด
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Data Table -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-base">ฐานข้อมูลการสำรวจรายครัวเรือนทั้งหมด</h4>
+                        <p class="text-xs text-slate-500 mt-1">ตารางข้อมูลดิบสำหรับการสืบค้น ปรับปรุง และจัดการโดยแอดมิน</p>
+                    </div>
+                    <div class="relative max-w-xs w-full">
+                        <input type="text" id="admin-search-input" onkeyup="filterAdminTable()" placeholder="พิมพ์ ค้นหาข้อมูลด่วน..." class="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-4 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none">
+                        <i class="fa-solid fa-magnifying-glass text-slate-400 absolute left-3 top-3 text-sm"></i>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-4 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">วันเวลา</th>
+                                <th class="px-4 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">ตำบล</th>
+                                <th class="px-4 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">หมู่บ้าน</th>
+                                <th class="px-4 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">บ้านเลขที่</th>
+                                <th class="px-4 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">เจ้าบ้าน</th>
+                                <th class="px-4 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">ภาชนะทั้งหมด</th>
+                                <th class="px-4 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">พบลูกน้ำ</th>
+                                <th class="px-4 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">CI (%)</th>
+                                <th class="px-4 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">ผลประเมิน</th>
+                                <th class="px-4 py-3.5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-admin-body" class="bg-white divide-y divide-slate-200">
+                            <!-- Raw survey list from sheet -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- App Configuration Settings Modal -->
+    <div id="connection-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+            <div class="bg-gradient-to-r from-blue-700 to-teal-600 text-white p-5 flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-gears mr-1.5"></i> ตั้งค่าการเชื่อมต่อฐานข้อมูล</h3>
+                <button onclick="toggleConnectionMode()" class="text-white hover:text-slate-200 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    ระบบพัฒนาขึ้นมารองรับระบบ Cloud ผ่าน <strong>Google Sheets + Google Apps Script Web App</strong> โดยหากยังไม่มีระบบหลังบ้าน สามารถรันโหมดจำลองสถานการณ์ไปก่อนได้ครับ
+                </p>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">สถานะการทำงาน</label>
+                    <select id="config-mode-select" onchange="toggleConfigInputs()" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2">
+                        <option value="demo">จำลองข้อมูลสถานการณ์ (Demo Mode)</option>
+                        <option value="live">เชื่อมต่อระบบคลาวด์จริง (Google Sheets Cloud)</option>
+                    </select>
+                </div>
+
+                <div id="gas-url-container" class="hidden">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Google Apps Script Web App URL</label>
+                    <input type="text" id="config-gas-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none">
+                    <p class="text-[10px] text-teal-600 mt-1">คัดลอก Web App URL จากส่วนการปรับใช้ (Deployment) บน GAS ของคุณมาวาง</p>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600">
+                    <p class="font-semibold text-slate-700 mb-1">ขั้นตอนการทำฐานข้อมูลคลาวด์ของตนเอง:</p>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>สร้าง Google Sheets เปล่าขึ้นมา</li>
+                        <li>ไปที่ Extensions -> Apps Script</li>
+                        <li>นำโค้ดในไฟล์ <code class="bg-slate-200 px-1 rounded">gas_code.js</code> ไปวางแทนที่แล้วกด Save</li>
+                        <li>กด Deploy -> New deployment -> เลือก Web App</li>
+                        <li>ตั้งผู้เข้าถึงเป็น "Anyone" แล้วนำลิงก์มาวางในช่องด้านบนนี้</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="toggleConnectionMode()" class="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold transition">ยกเลิก</button>
+                <button onclick="saveConnectionSettings()" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-bold transition shadow-md">บันทึกค่าและรีเฟรช</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert / Toast Message Overlay -->
+    <div id="toast-message" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl max-w-sm">
+        <div id="toast-icon" class="text-teal-400 text-lg">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="text-xs">
+            <p id="toast-title" class="font-bold">สำเร็จ</p>
+            <p id="toast-desc" class="text-slate-400 mt-0.5">ดำเนินการเรียบร้อยแล้ว</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-6 mt-8 border-t border-slate-800 text-center text-xs">
+        <p>© 2026 ระบบสารสนเทศภูมิศาสตร์เพื่อการควบคุมและควบคุมโรคไข้เลือดออก (GIS Dengue Control Dashboard)</p>
+        <p class="mt-1 text-slate-500">ขับเคลื่อนด้วยเทคโนโลยี Google Maps API, Google Apps Script & Tailwind CSS</p>
+    </footer>
+
+    <!-- Google Maps API and App Logic Scripts -->
+    <script>
+        // Google Maps Key provided by user
+        const GOOGLE_MAPS_KEY = "AIzaSyA1xmTQ_hd4n-FPyqIiUqPhAElgMRdYfUo";
+        
+        // Mock Demo Data for instantly running the app beautifully
+        const DEMO_SURVEY_DATA = [
+            { id: "1", timestamp: "18/06/2026 10:15:30", subdistrict: "หนองทับเปลา", village: "หมู่ 1 บ้านสระแก้ว", houseNumber: "12", headName: "นายประหยัด รักษ์ดี", lat: 17.4082, lng: 102.7955, usedTotal: 5, usedInfested: 1, otherTotal: 3, otherInfested: 1, notes: "หยอดทรายอะเบทแล้ว" },
+            { id: "2", timestamp: "18/06/2026 11:22:15", subdistrict: "หนองทับเปลา", village: "หมู่ 1 บ้านสระแก้ว", houseNumber: "45/1", headName: "นางสมพร สุขสำราญ", lat: 17.4071, lng: 102.7968, usedTotal: 4, usedInfested: 0, otherTotal: 2, otherInfested: 0, notes: "ไม่พบลูกน้ำยุงลาย สภาพแวดล้อมดี" },
+            { id: "3", timestamp: "18/06/2026 14:05:00", subdistrict: "หนองทับเปลา", village: "หมู่ 2 บ้านหัวหนอง", houseNumber: "88", headName: "นายมานะ อดทน", lat: 17.4125, lng: 102.8012, usedTotal: 6, usedInfested: 3, otherTotal: 5, otherInfested: 2, notes: "รอบบ้านมีขยะและยางรถยนต์เก่าวางเยอะ ได้ให้ความรู้แนะนำแล้ว" },
+            { id: "4", timestamp: "19/06/2026 09:30:12", subdistrict: "หนองทับเปลา", village: "หมู่ 2 บ้านหัวหนอง", houseNumber: "5", headName: "นางเพ็ญศรี มีชัย", lat: 17.4110, lng: 102.8025, usedTotal: 3, usedInfested: 0, otherTotal: 1, otherInfested: 0, notes: "คว่ำภาชนะที่ขังน้ำหมดแล้ว" },
+            { id: "5", timestamp: "19/06/2026 10:45:55", subdistrict: "โคกสะอาด", village: "หมู่ 3 บ้านโคกน้อย", houseNumber: "21", headName: "นายบุญมี แกล้วกล้า", lat: 17.4215, lng: 102.7885, usedTotal: 8, usedInfested: 2, otherTotal: 4, otherInfested: 0, notes: "แจกทรายอะเบทพ่นเคมีกำจัดยุงลาย" },
+            { id: "6", timestamp: "19/06/2026 13:10:40", subdistrict: "โคกสะอาด", village: "หมู่ 3 บ้านโคกน้อย", houseNumber: "104", headName: "นางสาวสมศรี ใยดี", lat: 17.4229, lng: 102.7870, usedTotal: 4, usedInfested: 0, otherTotal: 2, otherInfested: 1, notes: "พบในจานรองกระถางต้นไม้ ได้ทำการคว่ำทิ้งเรียบร้อย" }
+        ];
+
+        // Global State variables
+        let appMode = "demo"; // 'demo' or 'live'
+        let gasUrl = "";
+        let surveyDatabase = [];
+        let googleMap = null;
+        let mapMarkers = [];
+        let infoWindow = null;
+        
+        // Chart instances
+        let comparisonChart = null;
+        let riskPieChart = null;
+
+        // On document load
+        window.onload = function() {
+            loadSavedConfig();
+            initCharts();
+            fetchLatestDataFromSheet();
+            loadGoogleMapsScript();
+        };
+
+        // Load configuration from localStorage
+        function loadSavedConfig() {
+            const savedMode = localStorage.getItem("dengue_app_mode");
+            const savedUrl = localStorage.getItem("dengue_gas_url");
+            
+            if (savedMode) appMode = savedMode;
+            if (savedUrl) gasUrl = savedUrl;
+            
+            document.getElementById("config-mode-select").value = appMode;
+            document.getElementById("config-gas-url").value = gasUrl;
+            toggleConfigInputs();
+        }
+
+        // Toggle UI config inputs in modal
+        function toggleConfigInputs() {
+            const selectedMode = document.getElementById("config-mode-select").value;
+            const urlContainer = document.getElementById("gas-url-container");
+            if (selectedMode === "live") {
+                urlContainer.classList.remove("hidden");
+            } else {
+                urlContainer.classList.add("hidden");
+            }
+        }
+
+        // Save connection config
+        function saveConnectionSettings() {
+            const selectedMode = document.getElementById("config-mode-select").value;
+            const typedUrl = document.getElementById("config-gas-url").value.trim();
+
+            if (selectedMode === "live" && !typedUrl) {
+                showToast("ข้อมูลไม่ครบถ้วน", "กรุณากรอก Apps Script Web App URL", "error");
+                return;
+            }
+
+            appMode = selectedMode;
+            gasUrl = typedUrl;
+            
+            localStorage.setItem("dengue_app_mode", appMode);
+            localStorage.setItem("dengue_gas_url", gasUrl);
+            
+            toggleConnectionMode();
+            showToast("บันทึกการเชื่อมต่อแล้ว", "ระบบกำลังรีเฟรชข้อมูล", "success");
+            
+            fetchLatestDataFromSheet();
+        }
+
+        function toggleConnectionMode() {
+            const modal = document.getElementById("connection-modal");
+            if (modal.classList.contains("hidden")) {
+                modal.classList.remove("hidden");
+                modal.classList.add("flex");
+            } else {
+                modal.classList.remove("flex");
+                modal.classList.add("hidden");
+            }
+        }
+
+        // Fetch data from Sheet (Or load Mock)
+        function fetchLatestDataFromSheet() {
+            updateConnectionUI(true, "กำลังโหลดข้อมูล...");
+            
+            if (appMode === "demo") {
+                setTimeout(() => {
+                    const storedDemo = localStorage.getItem("dengue_demo_db");
+                    if (storedDemo) {
+                        surveyDatabase = JSON.parse(storedDemo);
+                    } else {
+                        surveyDatabase = [...DEMO_SURVEY_DATA];
+                        localStorage.setItem("dengue_demo_db", JSON.stringify(surveyDatabase));
+                    }
+                    processAndRenderData();
+                    updateConnectionUI(false, "ระบบออฟไลน์ (โหมดจำลองข้อมูล)");
+                    document.getElementById("last-update-time").innerText = new Date().toLocaleTimeString();
+                }, 800);
+            } else {
+                // Fetch data from actual GAS
+                fetch(`${gasUrl}?action=read`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.status === "success") {
+                            surveyDatabase = data.data;
+                            processAndRenderData();
+                            updateConnectionUI(false, "เชื่อมต่อคลาวด์เรียบร้อย");
+                            showToast("ดาวน์โหลดข้อมูลสำเร็จ", "ดึงข้อมูลจาก Google Sheets สำเร็จ", "success");
+                            document.getElementById("last-update-time").innerText = new Date().toLocaleTimeString();
+                        } else {
+                            throw new Error(data.message || "การดึงข้อมูลผิดพลาด");
+                        }
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        updateConnectionUI(false, "เชื่อมต่อคลาวด์ผิดพลาด", true);
+                        showToast("เชื่อมต่อผิดพลาด", "สลับเข้าสู่โหมดจำลองเพื่อจำกัดปัญหาการโหลดข้อมูล", "error");
+                        // Fallback to demo
+                        surveyDatabase = [...DEMO_SURVEY_DATA];
+                        processAndRenderData();
+                    });
+            }
+        }
+
+        function updateConnectionUI(isLoading, message, isError = false) {
+            const statusText = document.getElementById("connection-status");
+            const pulse = document.getElementById("connection-pulse");
+            const dot = document.getElementById("connection-dot");
+            
+            statusText.innerText = message;
+            
+            if (isLoading) {
+                pulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75";
+                dot.className = "relative inline-flex rounded-full h-3 w-3 bg-blue-500";
+            } else if (isError) {
+                pulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75";
+                dot.className = "relative inline-flex rounded-full h-3 w-3 bg-rose-600";
+            } else {
+                if (appMode === "demo") {
+                    pulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75";
+                    dot.className = "relative inline-flex rounded-full h-3 w-3 bg-amber-500";
+                } else {
+                    pulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+                    dot.className = "relative inline-flex rounded-full h-3 w-3 bg-emerald-500";
+                }
+            }
+        }
+
+        // Process survey database and update dashboards, filters and maps
+        function processAndRenderData() {
+            // Update Filter Dropdowns dynamically
+            populateFilters();
+            
+            // Apply current active filters and render
+            applyFilters();
+        }
+
+        function populateFilters() {
+            const subdistrictSelect = document.getElementById("filter-subdistrict");
+            const villageSelect = document.getElementById("filter-village");
+            
+            const currentSubdistrict = subdistrictSelect.value || "ทั้งหมด";
+            const currentVillage = villageSelect.value || "ทั้งหมด";
+
+            // Extract unique categories
+            const subdistricts = [...new Set(surveyDatabase.map(d => d.subdistrict))];
+            
+            // Repopulate subdistricts
+            subdistrictSelect.innerHTML = '<option value="ทั้งหมด">ทั้งหมด</option>';
+            subdistricts.forEach(sd => {
+                const opt = document.createElement("option");
+                opt.value = sd;
+                opt.innerText = sd;
+                subdistrictSelect.appendChild(opt);
+            });
+            subdistrictSelect.value = currentSubdistrict;
+
+            // Get villages based on selected subdistrict
+            let villages = [];
+            if (currentSubdistrict === "ทั้งหมด") {
+                villages = [...new Set(surveyDatabase.map(d => d.village))];
+            } else {
+                villages = [...new Set(surveyDatabase.filter(d => d.subdistrict === currentSubdistrict).map(d => d.village))];
+            }
+
+            // Repopulate villages
+            villageSelect.innerHTML = '<option value="ทั้งหมด">ทั้งหมด</option>';
+            villages.forEach(v => {
+                const opt = document.createElement("option");
+                opt.value = v;
+                opt.innerText = v;
+                villageSelect.appendChild(opt);
+            });
+            
+            // Adjust back chosen value if still valid
+            if (villages.includes(currentVillage)) {
+                villageSelect.value = currentVillage;
+            } else {
+                villageSelect.value = "ทั้งหมด";
+            }
+        }
+
+        // Calculate and Render Based on Chosen Filter
+        function applyFilters() {
+            const selectedSubdistrict = document.getElementById("filter-subdistrict").value;
+            const selectedVillage = document.getElementById("filter-village").value;
+
+            // Filter Dataset
+            let filtered = [...surveyDatabase];
+            if (selectedSubdistrict !== "ทั้งหมด") {
+                filtered = filtered.filter(d => d.subdistrict === selectedSubdistrict);
+            }
+            if (selectedVillage !== "ทั้งหมด") {
+                filtered = filtered.filter(d => d.village === selectedVillage);
+            }
+
+            // Calculations
+            const totalInspected = filtered.length;
+            let totalInfestedHouses = 0;
+            let totalContainers = 0;
+            let totalInfestedContainers = 0;
+            
+            let riskHighCount = 0;
+            let riskMedCount = 0;
+            let riskLowCount = 0;
+
+            filtered.forEach(item => {
+                const usedT = Number(item.usedTotal) || 0;
+                const usedI = Number(item.usedInfested) || 0;
+                const otherT = Number(item.otherTotal) || 0;
+                const otherI = Number(item.otherInfested) || 0;
+
+                const cTotal = usedT + otherT;
+                const cInfested = usedI + otherI;
+
+                totalContainers += cTotal;
+                totalInfestedContainers += cInfested;
+
+                const hasLarvae = cInfested > 0;
+                if (hasLarvae) {
+                    totalInfestedHouses++;
+                }
+
+                // Determine Household risk
+                const householdCI = cTotal > 0 ? (cInfested / cTotal) * 100 : 0;
+                if (householdCI >= 5 || (hasLarvae && totalInspected === 1)) {
+                    riskHighCount++;
+                } else if (hasLarvae) {
+                    riskMedCount++;
+                } else {
+                    riskLowCount++;
+                }
+            });
+
+            // Calculate Indices
+            const hi = totalInspected > 0 ? (totalInfestedHouses / totalInspected) * 100 : 0;
+            const ci = totalContainers > 0 ? (totalInfestedContainers / totalContainers) * 100 : 0;
+
+            // Update KPI Displays
+            document.getElementById("kpi-total-inspected").innerText = totalInspected;
+            document.getElementById("kpi-hi-index").innerText = hi.toFixed(1) + "%";
+            document.getElementById("kpi-ci-index").innerText = ci.toFixed(1) + "%";
+
+            // Update KPI Badges
+            const hiBadge = document.getElementById("kpi-hi-badge");
+            if (hi < 10) {
+                hiBadge.className = "inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+                hiBadge.innerText = "ผ่านเกณฑ์";
+            } else {
+                hiBadge.className = "inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800";
+                hiBadge.innerText = "เกินเกณฑ์มาตรฐาน";
+            }
+
+            const ciBadge = document.getElementById("kpi-ci-badge");
+            if (ci < 5) {
+                ciBadge.className = "inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+                ciBadge.innerText = "ผ่านเกณฑ์";
+            } else {
+                ciBadge.className = "inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800";
+                ciBadge.innerText = "เกินเกณฑ์มาตรฐาน";
+            }
+
+            // Risk Breakdown and counts
+            document.getElementById("risk-count-high").innerText = `${riskHighCount} ครัวเรือน`;
+            document.getElementById("risk-count-medium").innerText = `${riskMedCount} ครัวเรือน`;
+            document.getElementById("risk-count-low").innerText = `${riskLowCount} ครัวเรือน`;
+
+            // Calculate High Risk areas (villages with HI >= 10% or CI >= 5%)
+            let villageSummaryMap = {};
+            surveyDatabase.forEach(item => {
+                const key = `${item.subdistrict} - ${item.village}`;
+                if (!villageSummaryMap[key]) {
+                    villageSummaryMap[key] = { subdistrict: item.subdistrict, village: item.village, houses: 0, infestedHouses: 0, containers: 0, infestedContainers: 0 };
+                }
+                const usedT = Number(item.usedTotal) || 0;
+                const usedI = Number(item.usedInfested) || 0;
+                const otherT = Number(item.otherTotal) || 0;
+                const otherI = Number(item.otherInfested) || 0;
+
+                villageSummaryMap[key].houses++;
+                if ((usedI + otherI) > 0) {
+                    villageSummaryMap[key].infestedHouses++;
+                }
+                villageSummaryMap[key].containers += (usedT + otherT);
+                villageSummaryMap[key].infestedContainers += (usedI + otherI);
+            });
+
+            let highRiskVillagesCount = 0;
+            const villageSummaryList = Object.values(villageSummaryMap);
+            villageSummaryList.forEach(v => {
+                const v_hi = (v.infestedHouses / v.houses) * 100;
+                const v_ci = v.containers > 0 ? (v.infestedContainers / v.containers) * 100 : 0;
+                if (v_hi >= 10 || v_ci >= 5) {
+                    highRiskVillagesCount++;
+                }
+            });
+            document.getElementById("kpi-high-risk-count").innerText = highRiskVillagesCount;
+
+            // Render Charts
+            updateCharts(villageSummaryList, [riskHighCount, riskMedCount, riskLowCount]);
+
+            // Render Summary Tables & Sidebars
+            renderSummaryTable(villageSummaryList);
+            renderMapInfestedSidebar(filtered);
+            renderAdminTable(surveyDatabase); // Always show complete list for database tab
+            
+            // Redraw Google Map Markers
+            plotMapMarkers(filtered);
+        }
+
+        // Initialize empty ChartJS structures
+        function initCharts() {
+            const ctxComparison = document.getElementById("chart-index-comparison").getContext("2d");
+            comparisonChart = new Chart(ctxComparison, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'House Index (HI) %',
+                            data: [],
+                            backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                            borderColor: 'rgb(239, 68, 68)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Container Index (CI) %',
+                            data: [],
+                            backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                            borderColor: 'rgb(245, 158, 11)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'อัตราดัชนีชี้วัด (%)', font: { family: 'Prompt' } },
+                            ticks: { font: { family: 'Prompt' } }
+                        },
+                        x: {
+                            ticks: { font: { family: 'Prompt', size: 10 } }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { font: { family: 'Prompt', size: 11 } } }
+                    }
+                }
+            });
+
+            const ctxPie = document.getElementById("chart-risk-pie").getContext("2d");
+            riskPieChart = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['เสี่ยงสูง (เกินเกณฑ์)', 'เสี่ยงปานกลาง (พบลูกน้ำ)', 'เสี่ยงต่ำ (ไม่พบ)'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: [
+                            'rgb(239, 68, 68)',
+                            'rgb(245, 158, 11)',
+                            'rgb(16, 185, 129)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        // Update active chart displays with live filtered data
+        function updateCharts(villageSummary, riskData) {
+            if (!comparisonChart || !riskPieChart) return;
+
+            // 1. Update Comparison Bar Chart
+            const labels = villageSummary.map(v => v.village);
+            const hiData = villageSummary.map(v => Number(((v.infestedHouses / v.houses) * 100).toFixed(1)));
+            const ciData = villageSummary.map(v => v.containers > 0 ? Number(((v.infestedContainers / v.containers) * 100).toFixed(1)) : 0);
+
+            comparisonChart.data.labels = labels;
+            comparisonChart.data.datasets[0].data = hiData;
+            comparisonChart.data.datasets[1].data = ciData;
+            comparisonChart.update();
+
+            // 2. Update Pie Chart
+            riskPieChart.data.datasets[0].data = riskData;
+            riskPieChart.update();
+        }
+
+        // Render data rows in dashboard summary table
+        function renderSummaryTable(villageSummary) {
+            const tbody = document.getElementById("table-summary-body");
+            tbody.innerHTML = "";
+
+            if (villageSummary.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-4 text-center text-slate-500">ไม่มีข้อมูลการสำรวจในกลุ่มนี้</td></tr>';
+                return;
+            }
+
+            villageSummary.sort((a, b) => b.infestedHouses - a.infestedHouses); // Sort high infest first
+
+            villageSummary.forEach(v => {
+                const hi = ((v.infestedHouses / v.houses) * 100).toFixed(1);
+                const ci = v.containers > 0 ? ((v.infestedContainers / v.containers) * 100).toFixed(1) : "0.0";
+                
+                const hiPass = Number(hi) < 10;
+                const ciPass = Number(ci) < 5;
+                const bothPass = hiPass && ciPass;
+
+                let badgeHtml = '';
+                if (bothPass) {
+                    badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800"><i class="fa-solid fa-circle-check mr-1"></i> ควบคุมโรคดีเยี่ยม</span>';
+                } else if (!hiPass && !ciPass) {
+                    badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ความเสี่ยงสูงมาก</span>';
+                } else {
+                    badgeHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800"><i class="fa-solid fa-circle-exclamation mr-1"></i> เกินมาตรฐาน</span>';
+                }
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-slate-950">${v.subdistrict}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-slate-700">${v.village}</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap">${v.houses}</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap text-red-600 font-semibold">${v.infestedHouses}</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap ${hiPass ? 'text-emerald-600' : 'text-red-600 font-extrabold'}">${hi}%</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap">${v.containers}</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap text-red-600 font-semibold">${v.infestedContainers}</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap ${ciPass ? 'text-emerald-600' : 'text-amber-600 font-extrabold'}">${ci}%</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap">${badgeHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render infested house list in Map Sidebar
+        function renderMapInfestedSidebar(filteredData) {
+            const container = document.getElementById("infested-house-list");
+            container.innerHTML = "";
+
+            const infestedList = filteredData.filter(item => {
+                const cInfested = (Number(item.usedInfested) || 0) + (Number(item.otherInfested) || 0);
+                return cInfested > 0;
+            });
+
+            if (infestedList.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-slate-400">👍 ไม่พบครัวเรือนที่มีลูกน้ำยุงลายในตัวกรองนี้</div>';
+                return;
+            }
+
+            infestedList.forEach(item => {
+                const totalInfested = (Number(item.usedInfested) || 0) + (Number(item.otherInfested) || 0);
+                const card = document.createElement("div");
+                card.className = "bg-rose-50 border-l-4 border-rose-500 p-3 rounded-r-xl hover:bg-rose-100 transition cursor-pointer flex flex-col justify-between";
+                card.onclick = () => focusOnMap(item.lat, item.lng, item);
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="font-bold text-slate-800 text-xs">บ้านเลขที่ ${item.houseNumber}</span>
+                        <span class="bg-rose-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[9px]">พบ ${totalInfested} จุด</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600 mt-1"><i class="fa-solid fa-user text-[9px] mr-0.5"></i> ${item.headName}</p>
+                    <div class="flex justify-between items-center text-[10px] text-slate-500 mt-1.5">
+                        <span><i class="fa-solid fa-map-pin text-[9px]"></i> ${item.village}</span>
+                        <span class="text-[9px] bg-white text-slate-700 px-1 border border-slate-200 rounded">คลิกดูแผนที่</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterMapSidebar() {
+            const query = document.getElementById("map-search-input").value.toLowerCase();
+            const cards = document.getElementById("infested-house-list").children;
+            
+            for (let card of cards) {
+                if (card.innerText) {
+                    const text = card.innerText.toLowerCase();
+                    if (text.includes(query)) {
+                        card.style.display = "flex";
+                    } else {
+                        card.style.display = "none";
+                    }
+                }
+            }
+        }
+
+        // Render Complete Survey Database (Admin View)
+        function renderAdminTable(data) {
+            const tbody = document.getElementById("table-admin-body");
+            tbody.innerHTML = "";
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-4 text-center text-slate-500">ไม่มีข้อมูลการสำรวจ</td></tr>';
+                return;
+            }
+
+            // Show newest records first in admin list
+            const sortedData = [...data].reverse();
+
+            sortedData.forEach(item => {
+                const usedT = Number(item.usedTotal) || 0;
+                const usedI = Number(item.usedInfested) || 0;
+                const otherT = Number(item.otherTotal) || 0;
+                const otherI = Number(item.otherInfested) || 0;
+
+                const cTotal = usedT + otherT;
+                const cInfested = usedI + otherI;
+                const ci = cTotal > 0 ? ((cInfested / cTotal) * 100).toFixed(1) : "0.0";
+                
+                const hasLarvae = cInfested > 0;
+                let badgeHtml = '';
+                if (hasLarvae) {
+                    badgeHtml = '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800"><i class="fa-solid fa-bug text-[10px] mr-1"></i> พบลูกน้ำ</span>';
+                } else {
+                    badgeHtml = '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800"><i class="fa-solid fa-check text-[10px] mr-1"></i> ไม่พบ</span>';
+                }
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-xs text-slate-500">${item.timestamp}</td>
+                    <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-850">${item.subdistrict}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-slate-700">${item.village}</td>
+                    <td class="px-4 py-3 whitespace-nowrap font-semibold">${item.houseNumber}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-slate-600">${item.headName}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap font-medium">${cTotal}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap text-rose-600 font-bold">${cInfested}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap font-bold ${hasLarvae ? 'text-amber-500' : 'text-emerald-500'}">${ci}%</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap">${badgeHtml}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editSurveyRecord('${item.id}')" class="p-1 text-blue-600 hover:text-blue-850 hover:bg-blue-50 rounded transition" title="แก้ไขข้อมูล">
+                                <i class="fa-solid fa-pencil"></i>
+                            </button>
+                            <button onclick="deleteSurveyRecord('${item.id}')" class="p-1 text-rose-600 hover:text-rose-850 hover:bg-rose-50 rounded transition" title="ลบข้อมูล">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterAdminTable() {
+            const query = document.getElementById("admin-search-input").value.toLowerCase();
+            const rows = document.getElementById("table-admin-body").getElementsByTagName("tr");
+            
+            for (let row of rows) {
+                if (row.innerText) {
+                    const text = row.innerText.toLowerCase();
+                    if (text.includes(query)) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                }
+            }
+        }
+
+        // Tab Swapping helper
+        function switchTab(tabId) {
+            // Hide all contents
+            document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+            // Deactivate all buttons
+            document.querySelectorAll(".tab-btn").forEach(el => {
+                el.classList.remove("border-teal-600", "text-teal-600", "font-bold");
+                el.classList.add("border-transparent", "text-slate-500");
+            });
+
+            // Show active tab content
+            document.getElementById(`content-${tabId}`).classList.remove("hidden");
+            // Activate button style
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.classList.remove("border-transparent", "text-slate-500");
+            activeBtn.classList.add("border-teal-600", "text-teal-600", "font-bold");
+
+            // Map responsive fix on display trigger
+            if (tabId === "map-view" && googleMap) {
+                setTimeout(() => {
+                    google.maps.event.trigger(googleMap, "resize");
+                    reCenterMap();
+                }, 200);
+            }
+        }
+
+        // Calculate Realtime metrics inside the entry form
+        function calculateAutoSurveyMetrics() {
+            const usedT = Number(document.getElementById("form-used-total").value) || 0;
+            const usedI = Number(document.getElementById("form-used-infested").value) || 0;
+            const otherT = Number(document.getElementById("form-other-total").value) || 0;
+            const otherI = Number(document.getElementById("form-other-infested").value) || 0;
+
+            const cTotal = usedT + otherT;
+            const cInfested = usedI + otherI;
+            const ci = cTotal > 0 ? (cInfested / cTotal) * 100 : 0;
+
+            const ciText = document.getElementById("survey-result-ci");
+            const resultCard = document.getElementById("survey-realtime-card");
+            const resultStatus = document.getElementById("survey-result-status");
+            const resultDesc = document.getElementById("survey-result-desc");
+            const resultIcon = document.getElementById("survey-result-icon");
+
+            ciText.innerText = ci.toFixed(1) + "%";
+
+            if (cInfested > 0) {
+                if (ci >= 5) {
+                    // High Risk Alert
+                    resultCard.className = "bg-gradient-to-r from-rose-50 to-red-50 p-4 rounded-xl border border-rose-200 flex flex-col sm:flex-row justify-between items-center gap-4 animate-shake";
+                    resultStatus.className = "text-base font-bold text-red-800";
+                    resultStatus.innerText = "เสี่ยงสูง (เกินเกณฑ์มาตรฐาน CI)";
+                    resultDesc.innerText = "ต้องรีบหยอดทรายอะเบทหรือทำลายแหล่งเพาะพันธุ์ด่วน";
+                    resultIcon.className = "bg-red-500 text-white p-2.5 rounded-full";
+                    resultIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                } else {
+                    // Medium Risk
+                    resultCard.className = "bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200/50 flex flex-col sm:flex-row justify-between items-center gap-4";
+                    resultStatus.className = "text-base font-bold text-amber-800";
+                    resultStatus.innerText = "เสี่ยงปานกลาง (พบลูกน้ำยุงลาย)";
+                    resultDesc.innerText = "พบลูกน้ำเล็กน้อย ควรปรับปรุงทำลายภาชนะที่ขังน้ำ";
+                    resultIcon.className = "bg-amber-500 text-white p-2.5 rounded-full";
+                    resultIcon.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+                }
+            } else {
+                // Low Risk
+                resultCard.className = "bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-xl border border-teal-200/50 flex flex-col sm:flex-row justify-between items-center gap-4";
+                resultStatus.className = "text-base font-bold text-slate-800";
+                resultStatus.innerText = "เสี่ยงต่ำ (ไม่พบลูกน้ำยุงลาย)";
+                resultDesc.innerText = "ผ่านเกณฑ์ควบคุมโรคไข้เลือดออก";
+                resultIcon.className = "bg-emerald-500 text-white p-2.5 rounded-full";
+                resultIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
+        }
+
+        // Get GPS Location
+        function getCurrentLocation() {
+            if ("geolocation" in navigator) {
+                showToast("กำลังระบุตำแหน่ง", "ระบบกำลังหาพิกัดละติจูด/ลองจิจูดของคุณ...", "success");
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    document.getElementById("form-lat").value = position.coords.latitude.toFixed(6);
+                    document.getElementById("form-lng").value = position.coords.longitude.toFixed(6);
+                    showToast("ระบุพิกัดเสร็จสิ้น", "พิกัดถูกบันทึกลงฟอร์มแล้ว", "success");
+                }, function(error) {
+                    showToast("ไม่สามารถหาตำแหน่งได้", "กรุณาอนุญาตสิทธิ์เข้าถึง GPS บนอุปกรณ์ของคุณ หรือพิมพ์พิกัดด้วยตนเอง", "error");
+                });
+            } else {
+                showToast("ไม่รองรับ GPS", "อุปกรณ์หรือเบราว์เซอร์ของคุณไม่รองรับ GPS", "error");
+            }
+        }
+
+        // Reset Survey input fields
+        function resetForm() {
+            document.getElementById("entry-row-id").value = "";
+            document.getElementById("form-subdistrict").value = "";
+            document.getElementById("form-village").value = "";
+            document.getElementById("form-house-number").value = "";
+            document.getElementById("form-head-name").value = "";
+            document.getElementById("form-lat").value = "";
+            document.getElementById("form-lng").value = "";
+            document.getElementById("form-used-total").value = "0";
+            document.getElementById("form-used-infested").value = "0";
+            document.getElementById("form-other-total").value = "0";
+            document.getElementById("form-other-infested").value = "0";
+            document.getElementById("form-notes").value = "";
+            
+            document.getElementById("form-submit-text").innerText = "บันทึกข้อมูล";
+            calculateAutoSurveyMetrics();
+        }
+
+        // Handle Add/Edit Form submission
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const rowId = document.getElementById("entry-row-id").value;
+            const subdistrict = document.getElementById("form-subdistrict").value.trim();
+            const village = document.getElementById("form-village").value.trim();
+            const houseNumber = document.getElementById("form-house-number").value.trim();
+            const headName = document.getElementById("form-head-name").value.trim();
+            const lat = parseFloat(document.getElementById("form-lat").value);
+            const lng = parseFloat(document.getElementById("form-lng").value);
+            const usedTotal = parseInt(document.getElementById("form-used-total").value) || 0;
+            const usedInfested = parseInt(document.getElementById("form-used-infested").value) || 0;
+            const otherTotal = parseInt(document.getElementById("form-other-total").value) || 0;
+            const otherInfested = parseInt(document.getElementById("form-other-infested").value) || 0;
+            const notes = document.getElementById("form-notes").value.trim();
+
+            if (usedInfested > usedTotal || otherInfested > otherTotal) {
+                showToast("จำนวนภาชนะผิดพลาด", "จำนวนภาชนะที่พบลูกน้ำต้องไม่มากกว่าจำนวนภาชนะทั้งหมด", "error");
+                return;
+            }
+
+            const dataPayload = {
+                subdistrict, village, houseNumber, headName, lat, lng,
+                usedTotal, usedInfested, otherTotal, otherInfested, notes
+            };
+
+            updateConnectionUI(true, "กำลังประมวลผลเซฟข้อมูล...");
+
+            if (appMode === "demo") {
+                // Save locally to localstorage simulate sheet
+                if (rowId) {
+                    // Edit mode
+                    const index = surveyDatabase.findIndex(d => d.id === rowId);
+                    if (index > -1) {
+                        surveyDatabase[index] = { ...surveyDatabase[index], ...dataPayload };
+                    }
+                    showToast("ปรับปรุงสำเร็จ", "แก้ไขข้อมูลครัวเรือนเรียบร้อยแล้ว", "success");
+                } else {
+                    // Create mode
+                    const newId = (surveyDatabase.length + 1).toString();
+                    const newTimestamp = new Date().toLocaleString('th-TH');
+                    const newObj = { id: newId, timestamp: newTimestamp, ...dataPayload };
+                    surveyDatabase.push(newObj);
+                    showToast("บันทึกสำเร็จ", "เพิ่มข้อมูลการสำรวจครัวเรือนเรียบร้อย", "success");
+                }
+                
+                localStorage.setItem("dengue_demo_db", JSON.stringify(surveyDatabase));
+                processAndRenderData();
+                resetForm();
+                switchTab('dashboard');
+                updateConnectionUI(false, "ระบบออฟไลน์ (โหมดจำลองข้อมูล)");
+            } else {
+                // Post to Google Apps Script cloud sheet
+                const actionType = rowId ? "update" : "create";
+                const url = `${gasUrl}?action=${actionType}`;
+                
+                const formData = new FormData();
+                if (rowId) formData.append("id", rowId);
+                
+                Object.keys(dataPayload).forEach(key => {
+                    formData.append(key, dataPayload[key]);
+                });
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === "success") {
+                        showToast("สำเร็จ", result.message, "success");
+                        resetForm();
+                        fetchLatestDataFromSheet();
+                        switchTab('dashboard');
+                    } else {
+                        throw new Error(result.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast("บันทึกข้อมูลล้มเหลว", err.message || "ไม่สามารถอัปโหลดข้อมูลไปยัง Google Sheet ได้", "error");
+                    updateConnectionUI(false, "เชื่อมต่อคลาวด์ผิดพลาด", true);
+                });
+            }
+        }
+
+        // Fill Form for editing
+        function editSurveyRecord(id) {
+            const record = surveyDatabase.find(d => d.id === id);
+            if (!record) return;
+
+            document.getElementById("entry-row-id").value = record.id;
+            document.getElementById("form-subdistrict").value = record.subdistrict;
+            document.getElementById("form-village").value = record.village;
+            document.getElementById("form-house-number").value = record.houseNumber;
+            document.getElementById("form-head-name").value = record.headName;
+            document.getElementById("form-lat").value = record.lat;
+            document.getElementById("form-lng").value = record.lng;
+            document.getElementById("form-used-total").value = record.usedTotal;
+            document.getElementById("form-used-infested").value = record.usedInfested;
+            document.getElementById("form-other-total").value = record.otherTotal;
+            document.getElementById("form-other-infested").value = record.otherInfested;
+            document.getElementById("form-notes").value = record.notes || "";
+
+            document.getElementById("form-submit-text").innerText = "บันทึกการปรับปรุงข้อมูล";
+            calculateAutoSurveyMetrics();
+
+            switchTab('data-entry');
+            showToast("แก้ไขข้อมูล", `กำลังแก้ไขบ้านเลขที่ ${record.houseNumber}`, "success");
+        }
+
+        // Delete a Record
+        function deleteSurveyRecord(id) {
+            if (!confirm("คุณต้องการลบข้อมูลการสำรวจครัวเรือนนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้")) {
+                return;
+            }
+
+            updateConnectionUI(true, "กำลังลบข้อมูล...");
+
+            if (appMode === "demo") {
+                surveyDatabase = surveyDatabase.filter(d => d.id !== id);
+                localStorage.setItem("dengue_demo_db", JSON.stringify(surveyDatabase));
+                processAndRenderData();
+                showToast("ลบข้อมูลสำเร็จ", "ลบข้อมูลครัวเรือนเรียบร้อยแล้ว", "success");
+                updateConnectionUI(false, "ระบบออฟไลน์ (โหมดจำลองข้อมูล)");
+            } else {
+                const url = `${gasUrl}?action=delete`;
+                const formData = new FormData();
+                formData.append("id", id);
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === "success") {
+                        showToast("ลบข้อมูลเสร็จสิ้น", result.message, "success");
+                        fetchLatestDataFromSheet();
+                    } else {
+                        throw new Error(result.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast("ลบล้มเหลว", err.message || "ไม่สามารถลบข้อมูลใน Google Sheet ได้", "error");
+                    updateConnectionUI(false, "เชื่อมต่อคลาวด์ผิดพลาด", true);
+                });
+            }
+        }
+
+        // Export active database as CSV file
+        function exportDataToCSV() {
+            if (surveyDatabase.length === 0) return;
+
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            // Header Row
+            csvContent += "ID,วันที่บันทึก,ตำบล,หมู่บ้าน,บ้านเลขที่,เจ้าบ้าน,ละติจูด,ลองจิจูด,ภาชนะน้ำใช้ทั้งหมด,พบลูกน้ำในน้ำใช้,ภาชนะอื่นๆทั้งหมด,พบลูกน้ำในภาชนะอื่น,บันทึกเพิ่มเติม\n";
+
+            surveyDatabase.forEach(item => {
+                const row = [
+                    item.id,
+                    `"${item.timestamp}"`,
+                    `"${item.subdistrict}"`,
+                    `"${item.village}"`,
+                    `"${item.houseNumber}"`,
+                    `"${item.headName}"`,
+                    item.lat,
+                    item.lng,
+                    item.usedTotal,
+                    item.usedInfested,
+                    item.otherTotal,
+                    item.otherInfested,
+                    `"${item.notes || ''}"`
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Dengue_Larvae_Survey_Data_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("ส่งออกสำเร็จ", "ดาวน์โหลดไฟล์ CSV เรียบร้อยแล้ว", "success");
+        }
+
+        // Toast Messages handler
+        function showToast(title, desc, type = "success") {
+            const toast = document.getElementById("toast-message");
+            const tIcon = document.getElementById("toast-icon");
+            const tTitle = document.getElementById("toast-title");
+            const tDesc = document.getElementById("toast-desc");
+
+            tTitle.innerText = title;
+            tDesc.innerText = desc;
+
+            if (type === "success") {
+                tIcon.className = "text-emerald-400 text-lg";
+                tIcon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+            } else if (type === "error") {
+                tIcon.className = "text-rose-500 text-lg";
+                tIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+            }
+
+            toast.classList.remove("translate-y-20", "opacity-0");
+            toast.classList.add("translate-y-0", "opacity-100");
+
+            setTimeout(() => {
+                toast.classList.remove("translate-y-0", "opacity-100");
+                toast.classList.add("translate-y-20", "opacity-0");
+            }, 3000);
+        }
+
+
+        // ==========================================
+        // GOOGLE MAPS API INTEGRATION
+        // ==========================================
+        function loadGoogleMapsScript() {
+            const script = document.createElement("script");
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&callback=initGoogleMaps`;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+
+        // Callback function on maps API load complete
+        window.initGoogleMaps = function() {
+            const defaultCenter = { lat: 17.4082, lng: 102.7955 }; // Central position of survey points
+            
+            googleMap = new google.maps.Map(document.getElementById("google-map-canvas"), {
+                zoom: 13,
+                center: defaultCenter,
+                mapTypeId: 'hybrid', // Hybrid map so officers can easily see roof lines
+                styles: [
+                    { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }
+                ]
+            });
+
+            infoWindow = new google.maps.InfoWindow();
+            plotMapMarkers(surveyDatabase);
+        };
+
+        // Redraw and pin all active survey markers
+        function plotMapMarkers(filteredList) {
+            if (!googleMap) return;
+
+            // Clear previous markers
+            mapMarkers.forEach(marker => marker.setMap(null));
+            mapMarkers = [];
+
+            if (filteredList.length === 0) return;
+
+            filteredList.forEach(item => {
+                if (!item.lat || !item.lng) return;
+
+                const cInfested = (Number(item.usedInfested) || 0) + (Number(item.otherInfested) || 0);
+                const hasLarvae = cInfested > 0;
+
+                // Color Pin based on infestation finding status
+                // Red = found larvae, Green = clean/passed
+                const pinColor = hasLarvae ? "#EF4444" : "#10B981";
+
+                const marker = new google.maps.Marker({
+                    position: { lat: Number(item.lat), lng: Number(item.lng) },
+                    map: googleMap,
+                    title: `บ้านเลขที่ ${item.houseNumber} (${item.headName})`,
+                    icon: {
+                        path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                        scale: 6,
+                        fillColor: pinColor,
+                        fillOpacity: 0.9,
+                        strokeWeight: 1.5,
+                        strokeColor: "#FFFFFF"
+                    }
+                });
+
+                // Generate info bubble details
+                const totalUsed = Number(item.usedTotal) || 0;
+                const infestedUsed = Number(item.usedInfested) || 0;
+                const totalOther = Number(item.otherTotal) || 0;
+                const infestedOther = Number(item.otherInfested) || 0;
+                const totalC = totalUsed + totalOther;
+                const totalI = infestedUsed + infestedOther;
+                const localCI = totalC > 0 ? ((totalI / totalC) * 100).toFixed(1) : "0.0";
+
+                const contentString = `
+                    <div style="font-family: 'Prompt', sans-serif; padding: 4px; max-width: 250px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 6px;">
+                            <span style="font-weight: 700; color: #1e293b; font-size: 13px;">บ้านเลขที่ ${item.houseNumber}</span>
+                            <span style="background-color: ${hasLarvae ? '#fee2e2' : '#d1fae5'}; color: ${hasLarvae ? '#991b1b' : '#065f46'}; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">
+                                ${hasLarvae ? 'พบลูกน้ำยุงลาย' : 'ผ่านเกณฑ์สำรวจ'}
+                            </span>
+                        </div>
+                        <p style="font-size: 11px; color: #475569; margin: 2px 0;"><strong>เจ้าบ้าน:</strong> ${item.headName}</p>
+                        <p style="font-size: 11px; color: #475569; margin: 2px 0;"><strong>หมู่บ้าน:</strong> ${item.village} ต.${item.subdistrict}</p>
+                        <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 6px 0;">
+                        <p style="font-size: 11px; color: #475569; margin: 2px 0;"><strong>ภาชนะน้ำใช้:</strong> ${infestedUsed}/${totalUsed} ชิ้น</p>
+                        <p style="font-size: 11px; color: #475569; margin: 2px 0;"><strong>ภาชนะอื่นๆ:</strong> ${infestedOther}/${totalOther} ชิ้น</p>
+                        <p style="font-size: 11px; color: #475569; margin: 2px 0;"><strong>ดัชนีชี้วัด CI รายบ้าน:</strong> <strong style="color: ${hasLarvae ? '#dc2626' : '#16a34a'}">${localCI}%</strong></p>
+                        ${item.notes ? `<p style="font-size: 10px; background-color: #f1f5f9; padding: 4px; border-radius: 4px; color: #64748b; margin-top: 6px;"><strong>บันทึก:</strong> ${item.notes}</p>` : ''}
+                        <button onclick="editSurveyRecord('${item.id}')" style="margin-top: 8px; width: 100%; border: 1px solid #3b82f6; background-color: #f0f9ff; color: #1d4ed8; padding: 4px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
+                            <i class="fa-solid fa-edit"></i> แก้ไขข้อมูลครัวเรือนนี้
+                        </button>
+                    </div>
+                `;
+
+                marker.addListener("click", () => {
+                    infoWindow.setContent(contentString);
+                    infoWindow.open(googleMap, marker);
+                });
+
+                mapMarkers.push(marker);
+            });
+
+            reCenterMap();
+        }
+
+        // Center map to cover all mapped markers
+        function reCenterMap() {
+            if (mapMarkers.length === 0 || !googleMap) return;
+
+            const bounds = new google.maps.LatLngBounds();
+            mapMarkers.forEach(marker => bounds.extend(marker.getPosition()));
+            
+            // Auto fit map around pins
+            googleMap.fitBounds(bounds);
+            
+            // Adjust zoom level if too tight
+            const listener = google.maps.event.addListener(googleMap, "idle", () => {
+                if (googleMap.getZoom() > 16) googleMap.setZoom(16);
+                google.maps.event.removeListener(listener);
+            });
+        }
+
+        // Focus map and open marker detail on sidebar item click
+        function focusOnMap(lat, lng, item) {
+            if (!googleMap) return;
+
+            switchTab('map-view');
+            googleMap.setCenter({ lat: Number(lat), lng: Number(lng) });
+            googleMap.setZoom(18);
+
+            // Find matching marker to trigger details pop up click
+            const matchedMarker = mapMarkers.find(marker => {
+                const pos = marker.getPosition();
+                return pos.lat().toFixed(4) === Number(lat).toFixed(4) && pos.lng().toFixed(4) === Number(lng).toFixed(4);
+            });
+
+            if (matchedMarker) {
+                google.maps.event.trigger(matchedMarker, 'click');
+            }
+        }
+    </script>
+</body>
+</html>
