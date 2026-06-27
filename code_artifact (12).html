@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบแดชบอร์ดสะสมแต้มความดี & ออกคูปองชิงโชค</title>
+    <!-- Tailwind CSS สำหรับการจัดสไตล์พรีเมียม -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Sarabun & Prompt) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Sarabun', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            950: '#022c22',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* เอฟเฟกต์ตั๋วชิงโชคดิ้นได้ */
+        .ticket-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid #fbbf24;
+            position: relative;
+        }
+        .ticket-card::before, .ticket-card::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: #ffffff;
+            border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .ticket-card::before { left: -14px; border-right: 2px solid #fbbf24; }
+        .ticket-card::after { right: -14px; border-left: 2px solid #fbbf24; }
+        
+        .ticket-dash-line {
+            background-image: linear-gradient(to bottom, #fbbf24 60%, rgba(255, 255, 255, 0) 0%);
+            background-position: right;
+            background-size: 2px 10px;
+            background-repeat: repeat-y;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800">
+
+    <!-- ส่วนหัวเว็บไซต์ (Navbar) -->
+    <header class="bg-gradient-to-r from-brand-700 via-brand-600 to-emerald-800 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-amber-400 p-2.5 rounded-xl shadow-inner text-brand-950 animate-bounce">
+                        <i class="fa-solid fa-award text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+                            ระบบสะสมแต้มความดี & คูปองชิงโชค
+                            <span class="bg-amber-500 text-brand-950 text-xs px-2.5 py-0.5 rounded-full font-semibold">12 แต้ม = 1 สิทธิ์</span>
+                        </h1>
+                        <p class="text-emerald-100 text-xs sm:text-sm">บันทึกความดี ปลุกพลังบวกในชุมชน สะสมแต้มรับโชคใหญ่</p>
+                    </div>
+                </div>
+                
+                <!-- ปุ่มเข้าสู่ระบบ / แถบตั้งค่าผู้ดูแลระบบ (จะแสดงเฉพาะเมื่อผ่านการล็อกอิน) -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- ปุ่มล็อกอิน / ล็อกเอาต์ -->
+                    <div id="admin-auth-panel" class="flex items-center gap-2">
+                        <!-- ปุ่มเข้าสู่ระบบ (สำหรับคนทั่วไปเพื่อสลับเป็นแอดมิน) -->
+                        <button id="btn-login-trigger" onclick="openLoginModal()" class="bg-emerald-950/60 hover:bg-emerald-950 text-white border border-emerald-500/30 font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-lock text-amber-400"></i> เข้าสู่ระบบแอดมิน (จัดการข้อมูล)
+                        </button>
+                    </div>
+
+                    <!-- ฟอร์มตั้งค่าเชื่อมต่อ Google Sheets (แสดงเฉพาะแอดมินตัวจริง) -->
+                    <div id="admin-config-panel" class="hidden flex flex-wrap items-center gap-2 bg-emerald-900/40 p-1.5 rounded-xl border border-emerald-500/20">
+                        <div class="relative w-full sm:w-64">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-emerald-400">
+                                <i class="fa-solid fa-link text-[10px]"></i>
+                            </span>
+                            <input type="text" id="api-url-input" 
+                                placeholder="วาง Web App URL ของ Google Sheets..." 
+                                class="w-full text-xs bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-700/50 rounded-lg pl-7 pr-2 py-1.5 focus:ring-1 focus:ring-amber-400 focus:outline-none transition-all">
+                        </div>
+                        <button onclick="saveApiSettings()" class="bg-amber-500 hover:bg-amber-400 text-brand-950 font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1">
+                            <i class="fa-solid fa-floppy-disk"></i> เชื่อมต่อ GAS
+                        </button>
+                        <button onclick="toggleMockMode()" id="mock-status-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1">
+                            <i class="fa-solid fa-vial"></i> โหมดจำลอง
+                        </button>
+                        <button onclick="handleAdminLogout()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1">
+                            <i class="fa-solid fa-power-off"></i> ออกระบบ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- คอนเทนต์หลัก -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- แถบสถิติหลัก (Key Performance Indicators) -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- การ์ด 1: ผู้ทำความดีทั้งหมด -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between transition-all hover:shadow-md">
+                <div class="space-y-1">
+                    <span class="text-slate-500 text-xs font-medium uppercase tracking-wider">ผู้ทำความดีทั้งหมด</span>
+                    <h3 class="text-3xl font-bold text-slate-900" id="stat-total-users">0</h3>
+                    <p class="text-emerald-600 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-users"></i> บัญชีผู้ใช้งานระบบ
+                    </p>
+                </div>
+                <div class="p-3 bg-brand-50 text-brand-600 rounded-2xl">
+                    <i class="fa-solid fa-user-heart text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- การ์ด 2: แต้มความดีสะสมรวม -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between transition-all hover:shadow-md">
+                <div class="space-y-1">
+                    <span class="text-slate-500 text-xs font-medium uppercase tracking-wider">คะแนนความดีรวม</span>
+                    <h3 class="text-3xl font-bold text-slate-900" id="stat-total-points">0</h3>
+                    <p class="text-emerald-600 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-sparkles"></i> แต้มคูปองในระบบทั้งหมด
+                    </p>
+                </div>
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                    <i class="fa-solid fa-star text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- การ์ด 3: จำนวนใบชิงโชคที่ปล่อยตัว -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between transition-all hover:shadow-md">
+                <div class="space-y-1">
+                    <span class="text-slate-500 text-xs font-medium uppercase tracking-wider">ใบชิงโชคที่ได้รับสิทธิ์</span>
+                    <h3 class="text-3xl font-bold text-gold-600" id="stat-total-tickets">0</h3>
+                    <p class="text-slate-500 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-ticket"></i> ครบเซ็ตคูปอง 12 แต้ม
+                    </p>
+                </div>
+                <div class="p-3 bg-amber-50 text-gold-600 rounded-2xl">
+                    <i class="fa-solid fa-ticket-simple text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- การ์ด 4: แต้มสะสมเฉลี่ย -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between transition-all hover:shadow-md">
+                <div class="space-y-1">
+                    <span class="text-slate-500 text-xs font-medium uppercase tracking-wider">ค่าเฉลี่ยแต้มต่อคน</span>
+                    <h3 class="text-3xl font-bold text-slate-900" id="stat-avg-points">0.0</h3>
+                    <p class="text-slate-500 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-chart-line"></i> คะแนนเฉลี่ยในการทำดี
+                    </p>
+                </div>
+                <div class="p-3 bg-slate-50 text-slate-600 rounded-2xl">
+                    <i class="fa-solid fa-calculator text-2xl"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- โซนจัดการข้อมูลหลักและตารางรายชื่อ -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <!-- ส่วนการค้นหา คัดกรอง และปุ่มจัดการด้านบนตาราง -->
+            <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col xl:flex-row gap-4 items-center justify-between">
+                
+                <!-- แผงค้นหาและตัวเลือกคัดกรอง ตำบล/หมู่บ้าน -->
+                <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3 w-full xl:max-w-4xl">
+                    <!-- กล่องค้นหาอย่างรวดเร็ว -->
+                    <div class="relative md:col-span-1 xl:col-span-2">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input type="text" id="search-input" oninput="filterData()" 
+                            placeholder="ค้นหาด้วย เลขประชาชน, ชื่อ, โทร..." 
+                            class="w-full bg-white border border-slate-200 rounded-2xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all shadow-sm">
+                    </div>
+
+                    <!-- ตัวคัดกรอง: เลือกตำบล -->
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
+                            <i class="fa-solid fa-map-location-dot text-xs"></i>
+                        </span>
+                        <select id="filter-subdistrict" onchange="filterData()" 
+                            class="w-full bg-white border border-slate-200 rounded-2xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all shadow-sm appearance-none cursor-pointer">
+                            <option value="">ตำบลทั้งหมด</option>
+                        </select>
+                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 pointer-events-none">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </span>
+                    </div>
+
+                    <!-- ตัวคัดกรอง: เลือกหมู่บ้าน -->
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
+                            <i class="fa-solid fa-house-chimney-window text-xs"></i>
+                        </span>
+                        <select id="filter-village" onchange="filterData()" 
+                            class="w-full bg-white border border-slate-200 rounded-2xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all shadow-sm appearance-none cursor-pointer">
+                            <option value="">หมู่บ้านทั้งหมด</option>
+                        </select>
+                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 pointer-events-none">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- การดำเนินการอื่นๆ -->
+                <div class="flex flex-wrap gap-2 w-full xl:w-auto justify-end shrink-0">
+                    <button onclick="fetchData()" class="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold text-sm px-4 py-2.5 rounded-2xl shadow-sm transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-rotate animate-spin-hover"></i> ดึงข้อมูลล่าสุด
+                    </button>
+                    <!-- แสดงเฉพาะเมื่อล็อกอินแอดมิน -->
+                    <button id="btn-create-record" onclick="openCreateModal()" class="hidden bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm px-5 py-2.5 rounded-2xl shadow-sm transition-all flex items-center gap-2 animate-pulse">
+                        <i class="fa-solid fa-user-plus"></i> ลงทะเบียนความดีใหม่
+                    </button>
+                </div>
+            </div>
+
+            <!-- ตารางแสดงข้อมูลรายบุคคล -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                            <th class="py-4 px-6">ผู้ทำความดี / เบอร์โทร</th>
+                            <th class="py-4 px-6 text-center">เลขประจำตัวประชาชน</th>
+                            <th class="py-4 px-6 text-center">ตำบล</th>
+                            <th class="py-4 px-6 text-center">หมู่บ้าน</th>
+                            <th class="py-4 px-6 text-center">คูปองสะสม (แต้ม)</th>
+                            <th class="py-4 px-6 text-center">สิทธิ์ชิงโชคที่ได้</th>
+                            <th class="py-4 px-6">บันทึกทำความดีเพิ่มเติม</th>
+                            <th class="py-4 px-6 text-center">วันเวลาลงทะเบียนล่าสุด</th>
+                            <!-- คอลัมน์จัดการสำหรับแอดมินจะแสดงแบบมีเงื่อนไข -->
+                            <th id="th-admin-actions" class="hidden py-4 px-6 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="coupons-table-body" class="divide-y divide-slate-50 text-sm text-slate-700">
+                        <!-- แถวข้อมูลจริงจะแสดงตรงนี้จาก Javascript -->
+                        <tr>
+                            <td colspan="9" class="py-12 text-center text-slate-400">
+                                <div class="flex flex-col items-center justify-center space-y-2">
+                                    <i class="fa-solid fa-spinner animate-spin text-3xl text-brand-600"></i>
+                                    <p>กำลังโหลดข้อมูลการสะสมคูปองความดี...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ส่วนท้ายตาราง แสดงผลสรุปจำนวนแถวทั้งหมด -->
+            <div class="py-4 px-6 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+                <div>
+                    แสดงผลรายชื่อผู้ทำความดี <span id="table-showing-count" class="font-bold text-slate-700">0</span> รายการ จากทั้งหมด <span id="table-total-count" class="font-bold text-slate-700">0</span> รายการ
+                </div>
+                <div class="text-slate-400 flex items-center gap-1">
+                    <i class="fa-solid fa-shield-halved"></i> ฐานข้อมูลเก็บอยู่บน Google Sheets ของคุณอย่างปลอดภัย
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ส่วนท้ายสุด (Footer) -->
+    <footer class="bg-slate-900 text-slate-400 py-6 border-t border-slate-800 text-center text-xs">
+        <p class="mb-1">© 2026 ระบบสะสมคูปองความดีชุมชนอัจฉริยะ. สงวนลิขสิทธิ์</p>
+        <p>สร้างความดีคนละนิด เพื่อพลังสังคมที่น่าอยู่ สะสมครบ 12 แต้มลุ้นรางวัลใหญ่ทันที</p>
+    </footer>
+
+    <!-- ==================== MODAL 0: เข้าสู่ระบบแอดมิน ==================== -->
+    <div id="login-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div class="p-6 bg-brand-700 text-white flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-shield-halved text-amber-400"></i> ล็อกอินแอดมิน</h3>
+                    <p class="text-xs text-emerald-100">ป้อนข้อมูลสิทธิ์ระดับแอดมินเพื่ออนุมัติ/จัดการแต้ม</p>
+                </div>
+                <button onclick="closeModal('login-modal')" class="text-white hover:text-slate-200 p-2 text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="handleAdminLogin(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">ชื่อผู้ใช้งาน (Username)</label>
+                    <input type="text" id="login-username" required placeholder="admin" autocomplete="username"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">รหัสผ่าน (Password)</label>
+                    <input type="password" id="login-password" required placeholder="••••" autocomplete="current-password"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-2xl shadow-md transition-all text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-unlock-keyhole"></i> เข้าสู่ระบบและอนุมัติ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 1: บันทึกแต้ม / ลงทะเบียนผู้ใช้ใหม่ ==================== -->
+    <div id="form-modal" class="hidden fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- หัวข้อฟอร์ม -->
+            <div class="p-6 bg-brand-600 text-white flex justify-between items-center">
+                <div>
+                    <h3 id="modal-title" class="text-lg font-bold">ลงทะเบียนสะสมความดีใหม่</h3>
+                    <p class="text-xs text-emerald-100">กรอกประวัติและบันทึกจำนวนแต้มความดีเพื่อลุ้นสิทธิ์</p>
+                </div>
+                <button onclick="closeModal('form-modal')" class="text-white hover:text-slate-200 p-2 text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- ตัวฟอร์มกรอกข้อมูล -->
+            <form id="coupon-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="form-id">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- ชื่อ-นามสกุล -->
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">ชื่อ-นามสกุล ผู้ทำความดี <span class="text-rose-500">*</span></label>
+                        <input type="text" id="form-fullName" required placeholder="นายรักดี หมั่นเพียร" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                    </div>
+
+                    <!-- เลขประจำตัวประชาชน -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">เลขประจำตัวประชาชน <span class="text-rose-500">*</span></label>
+                        <input type="text" id="form-citizenId" required placeholder="x-xxxx-xxxxx-xx-x" maxlength="13"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                    </div>
+
+                    <!-- เบอร์โทรศัพท์ -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">เบอร์โทรศัพท์ติดต่อ <span class="text-rose-500">*</span></label>
+                        <input type="text" id="form-phone" required placeholder="08xxxxxxxx" maxlength="10"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                    </div>
+
+                    <!-- ตำบล -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">ตำบล <span class="text-rose-500">*</span></label>
+                        <input type="text" id="form-subdistrict" required placeholder="เช่น โนนทองอินทร์" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                    </div>
+
+                    <!-- หมู่บ้าน -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">หมู่บ้าน (ระบุชื่อหรือหมู่ที่) <span class="text-rose-500">*</span></label>
+                        <input type="text" id="form-village" required placeholder="เช่น หมู่ 1 บ้านโนนทอง" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                    </div>
+
+                    <!-- คะแนน/แต้มคูปองความดีสะสม -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">แต้มความดีสะสมตั้งต้น (ครั้ง)</label>
+                        <div class="flex items-center space-x-2">
+                            <button type="button" onclick="adjustPoints(-1)" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2 rounded-xl text-lg transition-all">-</button>
+                            <input type="number" id="form-currentPoints" value="1" min="0" required
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-center text-sm font-bold text-brand-700 focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                            <button type="button" onclick="adjustPoints(1)" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2 rounded-xl text-lg transition-all">+</button>
+                        </div>
+                    </div>
+
+                    <!-- สรุปผลสิทธิ์ตั๋วชิงโชคอัตโนมัติ -->
+                    <div class="bg-amber-50 rounded-xl p-3 border border-amber-200 flex flex-col justify-center text-center">
+                        <span class="text-[10px] text-amber-700 font-bold uppercase">คำนวณสิทธิ์ชิงโชคที่จะได้รับ</span>
+                        <div class="text-xl font-bold text-gold-600 mt-0.5">
+                            <span id="calc-tickets">0</span> ใบชิงโชค
+                        </div>
+                        <span class="text-[9px] text-amber-600" id="calc-tickets-remain">เหลืออีก 11 แต้มเพื่อได้ใบถัดไป</span>
+                    </div>
+                </div>
+
+                <!-- หมายเหตุทำดีเพิ่มเติม -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">บันทึกกิจกรรมความดีเพิ่มเติม</label>
+                    <textarea id="form-notes" placeholder="เช่น กวาดลานวัดประชาราม, ช่วยเหลืองานสาธารณสุขชุมชน, บริจาคโลหิตคราวที่ 2" rows="3"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all"></textarea>
+                </div>
+
+                <!-- ปุ่มส่งฟอร์ม -->
+                <div class="pt-4 flex gap-2">
+                    <button type="button" onclick="closeModal('form-modal')" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl transition-all text-sm">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" id="submit-btn" class="w-1/2 bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-2xl shadow-md transition-all text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: แสดงใบตั๋วชิงโชคจริงสุดหรู ==================== -->
+    <div id="ticket-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button onclick="closeModal('ticket-modal')" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center space-y-2 mb-6">
+                <h3 class="text-xl font-bold text-slate-900 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-ticket text-gold-500"></i> สิทธิ์ใบชิงโชคความดีของคุณ
+                </h3>
+                <p class="text-xs text-slate-500">ยินดีด้วยกับผู้สะสมคะแนนครบทุก ๆ 12 ครั้ง คุณได้รับคูปองนำโชคดังนี้</p>
+            </div>
+
+            <!-- คอนเทนเนอร์ตั๋ว (เลื่อนชมกรณีได้หลายสิทธิ์) -->
+            <div id="ticket-list" class="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar p-2">
+                <!-- ตั๋วชิงโชคจะถูกสร้างที่นี่โดย JS -->
+            </div>
+
+            <div class="mt-6 flex gap-2">
+                <button onclick="window.print()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 transition-all">
+                    <i class="fa-solid fa-print"></i> พิมพ์คูปองความดี
+                </button>
+                <button onclick="closeModal('ticket-modal')" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 transition-all shadow-md">
+                    ตกลง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- แจ้งเตือน Toast ด้านมุมขวาล่าง -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 text-sm animate-bounce">
+        <span id="toast-icon" class="text-amber-400"><i class="fa-solid fa-circle-info"></i></span>
+        <span id="toast-message">ข้อความแจ้งเตือน</span>
+    </div>
+
+    <!-- ========================================== JAVASCRIPT LOGIC ========================================== -->
+    <script>
+        // ข้อมูลจำลองตั้งต้น (Mock Data) ปรับปรุงให้มีคอมลัมน์ตำบลและหมู่บ้านครบถ้วน
+        const mockData = [
+            { id: "1", timestamp: "26/06/2026 10:24:11", citizenId: "1100501487541", fullName: "นายสมชาย ใจงาม", phone: "0812345678", subdistrict: "โนนทองอินทร์", village: "หมู่ 1 บ้านโนนทอง", currentPoints: 25, notes: "ร่วมกิจกรรมจิตอาสาปลูกป่าชุมชน และทำความสะอาดคลองส่งน้ำ" },
+            { id: "2", timestamp: "25/06/2026 14:15:32", citizenId: "3240500124785", fullName: "นางสาวสมหญิง สุจริต", phone: "0898765432", subdistrict: "โนนทองอินทร์", village: "หมู่ 2 บ้านดอนแก้ว", currentPoints: 12, notes: "ช่วยเหลือบริการน้ำดื่มในวันตรวจสุขภาพผู้สูงอายุประจำปี" },
+            { id: "3", timestamp: "24/06/2026 09:12:00", citizenId: "1529900458123", fullName: "นายวิชัย ดำเนินการ", phone: "0823456789", subdistrict: "โนนสะอาด", village: "หมู่ 5 บ้านโนนสะอาด", currentPoints: 7, notes: "บริจาคขยะรีไซเคิลสนับสนุนโครงการกองทุนหมู่บ้าน" },
+            { id: "4", timestamp: "23/06/2026 16:45:19", citizenId: "1124500789512", fullName: "นางกัลยา เมตตาดี", phone: "0855556677", subdistrict: "โนนทองอินทร์", village: "หมู่ 1 บ้านโนนทอง", currentPoints: 38, notes: "ดูแลสุนัขจรจัดในชุมชนอย่างต่อเนื่อง สุภาพ อารี มีวินัยดี" }
+        ];
+
+        let state = {
+            isMockMode: true,
+            apiUrl: "",
+            items: [],
+            isAdmin: false // ค่ากำหนดสถานะความปลอดภัยของแอดมิน (Default เป็นบุคคลทั่วไป)
+        };
+
+        // เริ่มต้นการรันแอปพลิเคชันหลัง DOM โหลดเรียบร้อย
+        window.addEventListener('DOMContentLoaded', () => {
+            // โหลดการตั้งค่าจาก LocalStorage
+            const savedUrl = localStorage.getItem('goodness_api_url') || "";
+            const savedMockMode = localStorage.getItem('goodness_mock_mode');
+            const savedAdmin = localStorage.getItem('goodness_is_admin') === 'true';
+            
+            state.apiUrl = savedUrl;
+            document.getElementById('api-url-input').value = savedUrl;
+
+            // ตรวจสอบเซสชันแอดมินเดิม
+            state.isAdmin = savedAdmin;
+            updateAdminUI();
+
+            if (savedMockMode !== null) {
+                state.isMockMode = savedMockMode === 'true';
+            } else {
+                state.isMockMode = savedUrl === ""; // ถ้าไม่มี URL ให้เป็น Mock โดยดีฟอลต์
+            }
+
+            // คำนวณตั๋วจำลองในฟอร์มอัตโนมัติเมื่อกดแต้มขึ้นลง
+            const ptsInput = document.getElementById('form-currentPoints');
+            ptsInput.addEventListener('input', updateTicketCalculationPreview);
+
+            // ปรับสีปุ่มจำลองและโหลดข้อมูล
+            updateMockModeButtonUI();
+            fetchData();
+        });
+
+        // เปิดหน้าต่างล็อกอิน
+        function openLoginModal() {
+            document.getElementById('login-username').value = "";
+            document.getElementById('login-password').value = "";
+            document.getElementById('login-modal').classList.remove('hidden');
+        }
+
+        // จัดการเข้าสู่ระบบแอดมิน
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+
+            if (u === 'admin' && p === '1234') {
+                state.isAdmin = true;
+                localStorage.setItem('goodness_is_admin', 'true');
+                
+                closeModal('login-modal');
+                updateAdminUI();
+                showToast("ยินดีต้อนรับแอดมินเข้าสู่ระบบอนุมัติข้อมูลสำเร็จ!", "success");
+                
+                // โหลดตารางใหม่เพื่อให้ปุ่มแก้ไขปรากฏ
+                renderTable(state.items);
+            } else {
+                showToast("ชื่อผู้ใช้หรือรหัสผ่านแอดมินไม่ถูกต้อง!", "error");
+            }
+        }
+
+        // ออกจากระบบแอดมิน
+        function handleAdminLogout() {
+            state.isAdmin = false;
+            localStorage.setItem('goodness_is_admin', 'false');
+            updateAdminUI();
+            showToast("ออกจากระบบแอดมินเรียบร้อยแล้ว", "info");
+            
+            // โหลดตารางใหม่เพื่อซ่อนปุ่มจัดการ
+            renderTable(state.items);
+        }
+
+        // อัปเดตส่วนควบคุมหน้าจอตามสิทธิ์ของแอดมิน
+        function updateAdminUI() {
+            const authPanel = document.getElementById('admin-auth-panel');
+            const configPanel = document.getElementById('admin-config-panel');
+            const createBtn = document.getElementById('btn-create-record');
+            const thActions = document.getElementById('th-admin-actions');
+
+            if (state.isAdmin) {
+                authPanel.classList.add('hidden');
+                configPanel.classList.remove('hidden');
+                createBtn.classList.remove('hidden');
+                thActions.classList.remove('hidden');
+            } else {
+                authPanel.classList.remove('hidden');
+                configPanel.classList.add('hidden');
+                createBtn.classList.add('hidden');
+                thActions.classList.add('hidden');
+            }
+        }
+
+        // บันทึกและดึงข้อมูลจากการตั้งค่าการเชื่อมต่อ API
+        function saveApiSettings() {
+            const urlInput = document.getElementById('api-url-input').value.trim();
+            if (!urlInput) {
+                showToast("กรุณากรอก URL สำหรับเชื่อมต่อฐานข้อมูล", "warning");
+                return;
+            }
+            if (!urlInput.startsWith("https://script.google.com/")) {
+                showToast("รูปแบบของ URL ไม่ถูกต้องตามฟอร์แมต Google Apps Script", "error");
+                return;
+            }
+
+            state.apiUrl = urlInput;
+            state.isMockMode = false;
+            localStorage.setItem('goodness_api_url', urlInput);
+            localStorage.setItem('goodness_mock_mode', 'false');
+
+            updateMockModeButtonUI();
+            showToast("บันทึกการตั้งค่าเชื่อมต่อเรียบร้อย เริ่มการดึงข้อมูลจริง...", "success");
+            fetchData();
+        }
+
+        // สลับโหมดจำลองสถานะข้อมูลทดสอบ
+        function toggleMockMode() {
+            state.isMockMode = !state.isMockMode;
+            localStorage.setItem('goodness_mock_mode', state.isMockMode.toString());
+            updateMockModeButtonUI();
+            showToast(state.isMockMode ? "สลับมาใช้โหมดจำลองข้อมูลตัวอย่าง" : "สลับไปใช้ฐานข้อมูลคลาวด์จริง", "info");
+            fetchData();
+        }
+
+        // ปรับแต่ง UI ของปุ่มเลือกโหมด
+        function updateMockModeButtonUI() {
+            const btn = document.getElementById('mock-status-btn');
+            if (state.isMockMode) {
+                btn.className = "bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1";
+                btn.innerHTML = `<i class="fa-solid fa-vial"></i> โหมดจำลอง`;
+            } else {
+                btn.className = "bg-slate-600 hover:bg-slate-500 text-slate-300 font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1";
+                btn.innerHTML = `<i class="fa-solid fa-link-slash"></i> โหมดสด`;
+            }
+        }
+
+        // ฟังก์ชันดึงข้อมูลจากหลังบ้าน (Google Sheets หรือ Mockup)
+        async function fetchData() {
+            renderLoadingTable();
+            
+            if (state.isMockMode) {
+                // โหลดข้อมูลจำลอง
+                const storedMock = localStorage.getItem('mock_db');
+                if (storedMock) {
+                    state.items = JSON.parse(storedMock);
+                } else {
+                    state.items = [...mockData];
+                    localStorage.setItem('mock_db', JSON.stringify(state.items));
+                }
+                updateDashboard();
+                return;
+            }
+
+            // ในกรณีที่ต้องการดึงข้อมูลจาก Google Apps Script จริง
+            if (!state.apiUrl) {
+                showToast("ไม่พบ URL สำหรับเชื่อมต่อฐานข้อมูล กำลังกลับสู่โหมดจำลองข้อมูลอัตโนมัติ...", "warning");
+                state.isMockMode = true;
+                updateMockModeButtonUI();
+                fetchData();
+                return;
+            }
+
+            try {
+                // ส่งคำร้องผ่าน HTTP GET (action=read) เพื่อดึงข้อมูล
+                const response = await fetch(`${state.apiUrl}?action=read`);
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    state.items = result.data || [];
+                    updateDashboard();
+                    showToast("อัปเดตข้อมูลจากระบบคลาวด์สำเร็จ", "success");
+                } else {
+                    showToast("ล้มเหลว: " + result.message, "error");
+                    switchToMockFallback();
+                }
+            } catch (err) {
+                console.error("Fetch error:", err);
+                showToast("เกิดปัญหาเชื่อมโยงกับสคริปต์หลังบ้านกรุณาตรวจสอบการตั้งค่า Deploy", "error");
+                switchToMockFallback();
+            }
+        }
+
+        function switchToMockFallback() {
+            showToast("สลับไปใช้ระบบเก็บข้อมูลจำลองในเครื่องชั่วคราวเพื่อรักษาระบบ", "info");
+            state.isMockMode = true;
+            updateMockModeButtonUI();
+            fetchData();
+        }
+
+        // ฟังก์ชันสำหรับใส่ตัวเลือกใน Dropdown ตัวคัดเลือก ตำบล/หมู่บ้าน แบบไดนามิกตามข้อมูลที่มีอยู่จริง
+        function populateFilterDropdowns() {
+            const subdistrictSelect = document.getElementById('filter-subdistrict');
+            const villageSelect = document.getElementById('filter-village');
+
+            // เก็บค่าที่เลือกไว้ก่อนหน้า
+            const currentSubdistrict = subdistrictSelect.value;
+            const currentVillage = villageSelect.value;
+
+            // ค้นหาตำบลและหมู่บ้านแบบไม่ซ้ำ
+            const uniqueSubdistricts = new Set();
+            const uniqueVillages = new Set();
+
+            state.items.forEach(item => {
+                if (item.subdistrict) uniqueSubdistricts.add(item.subdistrict.trim());
+                if (item.village) uniqueVillages.add(item.village.trim());
+            });
+
+            // อัปเดต Dropdown ตำบล
+            subdistrictSelect.innerHTML = '<option value="">ตำบลทั้งหมด</option>';
+            Array.from(uniqueSubdistricts).sort().forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub;
+                opt.textContent = sub;
+                subdistrictSelect.appendChild(opt);
+            });
+
+            // อัปเดต Dropdown หมู่บ้าน
+            villageSelect.innerHTML = '<option value="">หมู่บ้านทั้งหมด</option>';
+            Array.from(uniqueVillages).sort().forEach(vil => {
+                const opt = document.createElement('option');
+                opt.value = vil;
+                opt.textContent = vil;
+                villageSelect.appendChild(opt);
+            });
+
+            // ใส่ค่าเดิมกลับเข้าคืนไป (หากค่านั้นยังคงมีอยู่)
+            if (Array.from(uniqueSubdistricts).includes(currentSubdistrict)) {
+                subdistrictSelect.value = currentSubdistrict;
+            }
+            if (Array.from(uniqueVillages).includes(currentVillage)) {
+                villageSelect.value = currentVillage;
+            }
+        }
+
+        // อัปเดตตัววัดค่าต่างๆ บนแดชบอร์ด
+        function updateDashboard() {
+            let totalUsers = state.items.length;
+            let totalPoints = 0;
+            let totalTickets = 0;
+
+            state.items.forEach(item => {
+                totalPoints += Number(item.currentPoints || 0);
+                totalTickets += Math.floor(Number(item.currentPoints || 0) / 12);
+            });
+
+            let avgPoints = totalUsers > 0 ? (totalPoints / totalUsers).toFixed(1) : "0.0";
+
+            document.getElementById('stat-total-users').innerText = totalUsers.toLocaleString('th-TH');
+            document.getElementById('stat-total-points').innerText = totalPoints.toLocaleString('th-TH');
+            document.getElementById('stat-total-tickets').innerText = totalTickets.toLocaleString('th-TH');
+            document.getElementById('stat-avg-points').innerText = parseFloat(avgPoints).toLocaleString('th-TH');
+
+            // สร้าง Dropdown คัดกรอง
+            populateFilterDropdowns();
+            
+            // วาดตารางข้อมูลผู้เข้าร่วมทั้งหมด
+            renderTable(state.items);
+        }
+
+        // ค้นหาข้อมูลเรียลไทม์พร้อมระบุตัวคัดกรอง ตำบล/หมู่บ้าน
+        function filterData() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            const subdistrictFilter = document.getElementById('filter-subdistrict').value;
+            const villageFilter = document.getElementById('filter-village').value;
+
+            const filtered = state.items.filter(item => {
+                // ตรวจสอบช่องเซิร์ช (Search query)
+                const matchesSearch = !query || (
+                    (item.fullName && item.fullName.toLowerCase().includes(query)) ||
+                    (item.citizenId && item.citizenId.toLowerCase().includes(query)) ||
+                    (item.phone && item.phone.toLowerCase().includes(query))
+                );
+
+                // ตรวจสอบเงื่อนไขคัดกรอง ตำบล
+                const matchesSubdistrict = !subdistrictFilter || (item.subdistrict && item.subdistrict.trim() === subdistrictFilter);
+
+                // ตรวจสอบเงื่อนไขคัดกรอง หมู่บ้าน
+                const matchesVillage = !villageFilter || (item.village && item.village.trim() === villageFilter);
+
+                return matchesSearch && matchesSubdistrict && matchesVillage;
+            });
+
+            renderTable(filtered);
+        }
+
+        // แสดงผลตาราง Loading
+        function renderLoadingTable() {
+            const tbody = document.getElementById('coupons-table-body');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="${state.isAdmin ? '9' : '8'}" class="py-12 text-center text-slate-400">
+                        <div class="flex flex-col items-center justify-center space-y-2">
+                            <i class="fa-solid fa-arrows-spin animate-spin text-3xl text-brand-600"></i>
+                            <p class="text-sm">กำลังเชื่อมต่อส่งสัญญาณความดี...</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // วาดตารางข้อมูลผู้สะสมคูปองความดี (แสดงผลลัพธ์)
+        function renderTable(dataList) {
+            const tbody = document.getElementById('coupons-table-body');
+            tbody.innerHTML = "";
+
+            document.getElementById('table-showing-count').innerText = dataList.length;
+            document.getElementById('table-total-count').innerText = state.items.length;
+
+            const colspanVal = state.isAdmin ? 9 : 8;
+
+            if (dataList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${colspanVal}" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-box-open text-4xl mb-2"></i>
+                            <p class="text-sm font-medium">ไม่พบรายการข้อมูลตามระบุ</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            dataList.forEach(item => {
+                const totalPoints = Number(item.currentPoints || 0);
+                const ticketCount = Math.floor(totalPoints / 12);
+                const progressToNext = totalPoints % 12;
+                const progressPercent = Math.min(100, (progressToNext / 12) * 100);
+
+                // ตกแต่งบาร์แสดงความก้าวหน้า
+                let progressBarColor = "bg-brand-500";
+                if (progressToNext > 9) progressBarColor = "bg-amber-500";
+                if (progressToNext === 0 && totalPoints > 0) progressBarColor = "bg-brand-600";
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 transition-all border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-emerald-50 text-brand-600 flex items-center justify-center font-bold">
+                                ${item.fullName ? item.fullName.charAt(0) : "ม"}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900">${item.fullName || "ไม่ระบุชื่อ"}</h4>
+                                <span class="text-slate-400 text-xs"><i class="fa-solid fa-phone"></i> ${item.phone || "-"}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 text-center font-mono text-slate-600">
+                        ${formatCitizenId(item.citizenId)}
+                    </td>
+                    <td class="py-4 px-6 text-center text-slate-600">
+                        ${item.subdistrict || "-"}
+                    </td>
+                    <td class="py-4 px-6 text-center text-slate-600">
+                        ${item.village || "-"}
+                    </td>
+                    <td class="py-4 px-6 text-center">
+                        <div class="inline-flex flex-col items-center">
+                            <span class="text-lg font-bold text-slate-800">${totalPoints}</span>
+                            <!-- แถบสะสมแต้มความดี -->
+                            <div class="w-24 bg-slate-100 h-1.5 rounded-full mt-1 overflow-hidden" title="อีก ${12 - progressToNext} แต้มได้ใบชิงโชคใบถัดไป">
+                                <div class="${progressBarColor} h-full" style="width: ${progressPercent}%"></div>
+                            </div>
+                            <span class="text-[9px] text-slate-400 mt-0.5">${progressToNext}/12 แต้มสะสมรอบนี้</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 text-center">
+                        ${ticketCount > 0 ? `
+                            <button onclick="showTickets('${item.id}')" class="bg-gradient-to-r from-amber-500 to-gold-500 text-brand-950 font-bold px-3 py-1 rounded-full text-xs hover:from-amber-400 hover:to-gold-400 transition-all flex items-center gap-1 mx-auto shadow-sm">
+                                <i class="fa-solid fa-ticket"></i> ${ticketCount} ใบสิทธิ์
+                            </button>
+                        ` : `
+                            <span class="text-slate-400 text-xs italic">ยังไม่มีสิทธิ์ชิงโชค</span>
+                        `}
+                    </td>
+                    <td class="py-4 px-6 max-w-xs truncate text-slate-500" title="${item.notes || '-'}">
+                        ${item.notes || '-'}
+                    </td>
+                    <td class="py-4 px-6 text-center text-xs text-slate-400">
+                        ${item.timestamp || '-'}
+                    </td>
+                    ${state.isAdmin ? `
+                        <td class="py-4 px-6 text-center">
+                            <div class="flex items-center justify-center space-x-2">
+                                <button onclick="openEditModal('${item.id}')" class="p-2 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-all" title="แก้ไขข้อมูล">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="deleteConfirm('${item.id}')" class="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="ลบข้อมูล">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </td>
+                    ` : ''}
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // จัดรูปแบบเลขประจำตัวประชาชนให้ดูเป็นระเบียบปลอดภัย
+        function formatCitizenId(id) {
+            if (!id || id.length !== 13) return id || "-";
+            return `${id.substring(0,1)}-${id.substring(1,5)}-${id.substring(5,10)}-${id.substring(10,12)}-${id.substring(12,13)}`;
+        }
+
+        // สรุปยอดแต้มชิงโชคพรีวิวในหน้า Modal การลงทะเบียน
+        function updateTicketCalculationPreview() {
+            const pts = parseInt(document.getElementById('form-currentPoints').value) || 0;
+            const tickets = Math.floor(pts / 12);
+            const remain = pts % 12;
+
+            document.getElementById('calc-tickets').innerText = tickets;
+            const textSpan = document.getElementById('calc-tickets-remain');
+            if (remain === 0) {
+                textSpan.innerText = `ได้จำนวนตั๋วลงตัวพอดี!`;
+                textSpan.className = "text-[9px] text-emerald-600 font-medium";
+            } else {
+                textSpan.innerText = `ขาดอีก ${12 - remain} แต้มเพื่อได้คูปองใบต่อไป`;
+                textSpan.className = "text-[9px] text-amber-600";
+            }
+        }
+
+        // ปรับคะแนนโดยใช้ปุ่มบวกลบในฟอร์ม
+        function adjustPoints(val) {
+            const input = document.getElementById('form-currentPoints');
+            let current = parseInt(input.value) || 0;
+            current = Math.max(0, current + val);
+            input.value = current;
+            updateTicketCalculationPreview();
+        }
+
+        // เปิดหน้าต่างบันทึกข้อมูลสะสมความดี (Create)
+        function openCreateModal() {
+            if (!state.isAdmin) {
+                showToast("ต้องการสิทธิ์แอดมินในการทำรายการนี้", "error");
+                return;
+            }
+            document.getElementById('modal-title').innerText = "ลงทะเบียนสะสมความดีใหม่";
+            document.getElementById('coupon-form').reset();
+            document.getElementById('form-id').value = "";
+            document.getElementById('form-currentPoints').value = "1";
+            updateTicketCalculationPreview();
+            
+            document.getElementById('form-modal').classList.remove('hidden');
+        }
+
+        // เปิดหน้าต่างแก้ไขข้อมูลสะสมความดี (Update)
+        function openEditModal(id) {
+            if (!state.isAdmin) {
+                showToast("ต้องการสิทธิ์แอดมินในการแก้ไขข้อมูล", "error");
+                return;
+            }
+            const target = state.items.find(item => item.id === id);
+            if (!target) return;
+
+            document.getElementById('modal-title').innerText = `แก้ไขคะแนนของคุณ ${target.fullName}`;
+            document.getElementById('form-id').value = target.id;
+            document.getElementById('form-fullName').value = target.fullName;
+            document.getElementById('form-citizenId').value = target.citizenId;
+            document.getElementById('form-phone').value = target.phone;
+            document.getElementById('form-subdistrict').value = target.subdistrict || "";
+            document.getElementById('form-village').value = target.village || "";
+            document.getElementById('form-currentPoints').value = target.currentPoints;
+            document.getElementById('form-notes').value = target.notes;
+
+            updateTicketCalculationPreview();
+            document.getElementById('form-modal').classList.remove('hidden');
+        }
+
+        // ปิด Modal
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // จัดการส่งฟอร์มเพื่อบันทึกข้อมูล (Create/Update)
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (!state.isAdmin) {
+                showToast("เกิดข้อผิดพลาด: คุณไม่ได้รับอนุญาตให้ส่งแบบฟอร์มนี้", "error");
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> กำลังประมวลผล...`;
+
+            const id = document.getElementById('form-id').value;
+            const citizenId = document.getElementById('form-citizenId').value.trim();
+            const fullName = document.getElementById('form-fullName').value.trim();
+            const phone = document.getElementById('form-phone').value.trim();
+            const subdistrict = document.getElementById('form-subdistrict').value.trim();
+            const village = document.getElementById('form-village').value.trim();
+            const currentPoints = parseInt(document.getElementById('form-currentPoints').value) || 0;
+            const notes = document.getElementById('form-notes').value.trim();
+
+            const timestamp = formatDateTime(new Date());
+
+            if (state.isMockMode) {
+                // อัปเดตข้อมูลภายในเครื่องเบราว์เซอร์ (Mock)
+                let mockDb = JSON.parse(localStorage.getItem('mock_db')) || [...mockData];
+                
+                if (id) {
+                    // ดำเนินการอัปเดต (Update)
+                    mockDb = mockDb.map(item => {
+                        if (item.id === id) {
+                            return { ...item, citizenId, fullName, phone, subdistrict, village, currentPoints, notes, timestamp };
+                        }
+                        return item;
+                    });
+                    showToast("ปรับปรุงคะแนนผู้ทำความดีสำเร็จแล้ว", "success");
+                } else {
+                    // ดำเนินการสร้างข้อมูลใหม่ (Create)
+                    const newId = (mockDb.length + 1).toString();
+                    mockDb.push({ id: newId, timestamp, citizenId, fullName, phone, subdistrict, village, currentPoints, notes });
+                    showToast(`เพิ่มประวัติคุณ ${fullName} เรียบร้อยแล้ว`, "success");
+                }
+
+                localStorage.setItem('mock_db', JSON.stringify(mockDb));
+                state.items = mockDb;
+                updateDashboard();
+                closeModal('form-modal');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> บันทึกข้อมูล`;
+                return;
+            }
+
+            // ในกรณีที่ต้องการส่งคำขออัปเดตข้อมูลจริงบน Apps Script
+            const action = id ? "update" : "create";
+            const formData = new URLSearchParams();
+            formData.append("action", action);
+            if (id) formData.append("id", id);
+            formData.append("citizenId", citizenId);
+            formData.append("fullName", fullName);
+            formData.append("phone", phone);
+            formData.append("subdistrict", subdistrict);
+            formData.append("village", village);
+            formData.append("currentPoints", currentPoints);
+            formData.append("notes", notes);
+
+            try {
+                // ใช้การ POST ด้วย Content-Type แบบ Form URL Encoded
+                const response = await fetch(state.apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: formData.toString()
+                });
+                
+                const result = await response.json();
+                if (result.status === "success") {
+                    showToast(result.message, "success");
+                    closeModal('form-modal');
+                    fetchData(); // ดึงชุดข้อมูลเพื่อรีเฟรชหน้าจอ
+                } else {
+                    showToast(result.message, "error");
+                }
+            } catch (err) {
+                console.error("Post Error:", err);
+                showToast("ไม่สามารถส่งคำขอบันทึกไปยังคลาวด์ชีตได้", "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> บันทึกข้อมูล`;
+            }
+        }
+
+        // ยืนยันและการลบข้อมูล (Delete)
+        async function deleteConfirm(id) {
+            if (!state.isAdmin) {
+                showToast("คุณต้องเป็นแอดมินเพื่อลบข้อมูลนี้", "error");
+                return;
+            }
+            const target = state.items.find(item => item.id === id);
+            if (!target) return;
+
+            // แทนที่การใช้ window.confirm ด้วยการสร้าง UI Custom Alert เพื่อป้องกันปัญหาบน Frame แดชบอร์ด
+            const confirmed = window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการจะลบประวัติของ "คุณ ${target.fullName}" ? \nหากลบคะแนนสะสมและสิทธิ์จะหายไปทันที`);
+            if (!confirmed) return;
+
+            if (state.isMockMode) {
+                let mockDb = JSON.parse(localStorage.getItem('mock_db')) || [...mockData];
+                mockDb = mockDb.filter(item => item.id !== id);
+                localStorage.setItem('mock_db', JSON.stringify(mockDb));
+                state.items = mockDb;
+                updateDashboard();
+                showToast("นำประวัติออกจากระบบเรียบร้อยแล้ว", "success");
+                return;
+            }
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append("action", "delete");
+                formData.append("id", id);
+
+                const response = await fetch(state.apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: formData.toString()
+                });
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    showToast(result.message, "success");
+                    fetchData();
+                } else {
+                    showToast(result.message, "error");
+                }
+            } catch (err) {
+                console.error("Delete Error:", err);
+                showToast("พบปัญหาเชื่อมต่อระบบไม่สามารถทำการลบข้อมูลได้", "error");
+            }
+        }
+
+        // แสดงสิทธิ์ใบตั๋วชิงโชคเป็นกราฟิกสีทองหรูหรา
+        function showTickets(userId) {
+            const target = state.items.find(item => item.id === userId);
+            if (!target) return;
+
+            const ticketListDiv = document.getElementById('ticket-list');
+            ticketListDiv.innerHTML = "";
+
+            const totalPoints = Number(target.currentPoints || 0);
+            const ticketCount = Math.floor(totalPoints / 12);
+
+            for (let i = 1; i <= ticketCount; i++) {
+                // สร้างหมายเลขซีเรียลสุ่มที่มีความเฉพาะของแต่ละคูปอง
+                const serialNum = `MERIT-2026-${String(userId).padStart(3, '0')}-${String(i).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+                const ticketCard = document.createElement('div');
+                ticketCard.className = "ticket-card p-5 rounded-2xl border-amber-400 overflow-hidden flex flex-row items-stretch justify-between shadow-lg text-white mb-4";
+                ticketCard.innerHTML = `
+                    <!-- ฝั่งซ้ายตัวตั๋วใหญ่ -->
+                    <div class="flex-1 pr-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-1.5 text-xs text-amber-400 font-bold uppercase tracking-wider">
+                                <i class="fa-solid fa-medal animate-pulse"></i> คูปองชิงโชคคนดีศรีชุมชน
+                            </div>
+                            <h2 class="text-lg font-bold text-slate-100 mt-1">${target.fullName}</h2>
+                            <p class="text-[10px] text-slate-400">เลขประชาชน: ${formatCitizenId(target.citizenId)}</p>
+                            <p class="text-[10px] text-slate-400">ตำบล: ${target.subdistrict || "-"} | หมู่บ้าน: ${target.village || "-"}</p>
+                            <p class="text-[10px] text-slate-400">โทรติดต่อ: ${target.phone}</p>
+                        </div>
+                        <div class="mt-4 border-t border-slate-800 pt-2 flex justify-between items-center text-[10px] text-slate-400">
+                            <span>สะสมครบ 12 แต้มความดี</span>
+                            <span class="text-amber-400 font-semibold text-xs">สิทธิ์ที่ ${i}/${ticketCount}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- ส่วนรอยปะเส้นพับตั๋ว -->
+                    <div class="ticket-dash-line w-[2px] mx-2"></div>
+
+                    <!-- ฝั่งขวา (คูปองหางตั๋วสลากกินแบ่ง) -->
+                    <div class="w-32 pl-4 flex flex-col justify-between text-right items-end">
+                        <div class="bg-amber-400/10 border border-amber-400/40 rounded px-2 py-0.5 text-amber-400 text-[9px] font-bold">
+                             lucky draw
+                        </div>
+                        <div class="my-2">
+                            <span class="text-[9px] text-slate-400 block">ซีเรียลอ้างอิง</span>
+                            <span class="text-xs font-mono font-bold text-amber-400 block">${serialNum.split('-').pop()}</span>
+                        </div>
+                        <span class="text-[9px] text-slate-500 font-mono break-all">${serialNum}</span>
+                    </div>
+                `;
+                ticketListDiv.appendChild(ticketCard);
+            }
+
+            document.getElementById('ticket-modal').classList.remove('hidden');
+        }
+
+        // จัดฟอร์แมตวันเวลาในการจัดส่งข้อมูลให้เป็นระบบ
+        function formatDateTime(date) {
+            const d = date.getDate().toString().padStart(2, '0');
+            const m = (date.getMonth() + 1).toString().padStart(2, '0');
+            const y = date.getFullYear();
+            const h = date.getHours().toString().padStart(2, '0');
+            const min = date.getMinutes().toString().padStart(2, '0');
+            const s = date.getSeconds().toString().padStart(2, '0');
+            return `${d}/${m}/${y} ${h}:${min}:${s}`;
+        }
+
+        // แสดงแจ้งเตือนผลการดำเนินงาน Toast
+        function showToast(message, type = "info") {
+            const toast = document.getElementById('toast');
+            const msgSpan = document.getElementById('toast-message');
+            const iconSpan = document.getElementById('toast-icon');
+
+            msgSpan.innerText = message;
+            
+            // ปรับแต่งสีและสัญลักษณ์ไอคอนตามประเภทความรุนแรง
+            if (type === "success") {
+                iconSpan.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>`;
+            } else if (type === "warning") {
+                iconSpan.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400 text-lg"></i>`;
+            } else if (type === "error") {
+                iconSpan.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-500 text-lg"></i>`;
+            } else {
+                iconSpan.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400 text-lg"></i>`;
+            }
+
+            toast.classList.remove('hidden');
+            
+            // หน่วงเวลา 3 วินาทีก่อนปิด
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
