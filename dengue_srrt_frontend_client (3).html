@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦟 Dengue SRRT Smart GIS Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#DC2626',   // แดง
+                        secondary: '#16A34A', // เขียว
+                        warning: '#FACC15',   // เหลือง
+                        info: '#2563EB',      // น้ำเงิน
+                    },
+                    fontFamily: {
+                        sarabun: ['Sarabun', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet GIS CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        /* Scrollbar customization */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(241, 245, 249, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(203, 213, 225, 1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 1);
+        }
+        #map {
+            height: 500px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 transition-colors duration-300">
+
+    <!-- ========================================== -->
+    <!-- 1. หน้าตั้งค่าการเชื่อมต่อครั้งแรก (API Setup Page) -->
+    <!-- ========================================== -->
+    <div id="setup-screen" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-tr from-rose-500 via-red-600 to-amber-500 p-4">
+        <div class="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20 transform transition-all hover:scale-[1.01]">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                    <i class="fa-solid fa-mosquito text-rose-600 text-4xl"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Dengue SRRT Smart GIS</h1>
+                <p class="text-sm text-slate-600 mt-1">ระบบวิเคราะห์ทางภูมิศาสตร์และระบาดวิทยาไข้เลือดออก</p>
+                <div class="inline-block mt-3 px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+                    ระบบวิเคราะห์และสอบสวนโรคอัจฉริยะ (Production Version)
+                </div>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                        <i class="fa-solid fa-link mr-1 text-rose-500"></i> Google Apps Script API Web URL
+                    </label>
+                    <input type="text" id="api-url-input" 
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-sm transition-all shadow-sm"
+                        placeholder="https://script.google.com/macros/s/.../exec">
+                    <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                        * ระบบจะเชื่อมโยงกับฐานข้อมูล Google Sheet และทำการตรวจสอบ/สร้างโครงสร้างตารางและตัวอย่างข้อมูลให้อัตโนมัติเมื่อกดเชื่อมต่อ
+                    </p>
+                </div>
+
+                <button id="btn-connect" onclick="setupSystemConnection()"
+                    class="w-full bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold py-3 px-4 rounded-xl hover:opacity-95 transition-all shadow-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>เชื่อมต่อและตั้งค่าระบบอัตโนมัติ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. หน้าหลัก Main App Layout (เมื่อเชื่อมต่อสำเร็จ) -->
+    <!-- ========================================== -->
+    <div id="main-screen" class="hidden min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
+        
+        <!-- Header / Navigation Bar -->
+        <header class="bg-gradient-to-r from-slate-900 via-red-950 to-slate-900 text-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Brand -->
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-red-600 rounded-lg shadow-inner">
+                            <i class="fa-solid fa-mosquito text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <span class="font-black text-lg tracking-wider block">DENGUE SRRT</span>
+                            <span class="text-[10px] text-rose-400 font-semibold uppercase tracking-widest block -mt-1">Smart GIS Dashboard</span>
+                        </div>
+                    </div>
+
+                    <!-- Role Configuration (RBAC) & Logout -->
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block">สิทธิ์ผู้ใช้งานปัจจุบัน:</span>
+                            <select id="user-role-selector" onchange="changeUserRole()" class="bg-slate-800 text-xs font-bold text-emerald-400 rounded-lg px-2 py-1 border border-slate-700 focus:outline-none">
+                                <option value="ADMIN">ADMIN (จัดการทั้งหมด)</option>
+                                <option value="SRRT">SRRT (เพิ่ม/แก้ไขข้อมูล)</option>
+                                <option value="OSM">อสม. (บันทึกสำรวจเท่านั้น)</option>
+                                <option value="VIEWER">VIEWER (ดูข้อมูลเท่านั้น)</option>
+                            </select>
+                        </div>
+                        <button onclick="disconnectSystem()" class="p-2.5 bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl transition-all" title="ตัดการเชื่อมต่อ API">
+                            <i class="fa-solid fa-power-off text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Subheader & Tabs Navigation -->
+        <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex space-x-2 py-3 overflow-x-auto">
+                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-tab active px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 bg-red-50 text-red-600">
+                        <i class="fa-solid fa-chart-line"></i> <span>แดชบอร์ด</span>
+                    </button>
+                    <button onclick="switchTab('gis')" id="tab-gis" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 text-slate-600 hover:bg-slate-100">
+                        <i class="fa-solid fa-map-location-dot"></i> <span>แผนที่ GIS ควบคุมโรค</span>
+                    </button>
+                    <button onclick="switchTab('patients')" id="tab-patients" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 text-slate-600 hover:bg-slate-100">
+                        <i class="fa-solid fa-hospital-user"></i> <span>ข้อมูลผู้ป่วย</span>
+                    </button>
+                    <button onclick="switchTab('surveys')" id="tab-surveys" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 text-slate-600 hover:bg-slate-100">
+                        <i class="fa-solid fa-clipboard-list"></i> <span>สำรวจลูกน้ำ (HI/CI/BI)</span>
+                    </button>
+                    <button onclick="switchTab('fogging')" id="tab-fogging" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 text-slate-600 hover:bg-slate-100">
+                        <i class="fa-solid fa-spray-can-sparkles"></i> <span>การพ่นเคมีกำจัดยุง</span>
+                    </button>
+                    <button onclick="switchTab('settings')" id="tab-settings" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 text-slate-600 hover:bg-slate-100">
+                        <i class="fa-solid fa-sliders"></i> <span>ตั้งค่าระบบ</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+            <!-- Indicator when offline or synced -->
+            <div id="sync-indicator" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex justify-between items-center shadow-sm">
+                <span><i class="fa-solid fa-triangle-exclamation mr-1.5 animate-pulse"></i> ข้อมูลบางส่วนถูกจัดเก็บชั่วคราวในอุปกรณ์ เนื่องจากไม่สามารถระบุการเชื่อมต่อเซิร์ฟเวอร์ได้</span>
+                <button onclick="fetchDashboardData()" class="px-2 py-1 bg-amber-600 text-white font-bold rounded hover:bg-amber-700">ลองส่งข้อมูลใหม่</button>
+            </div>
+
+            <!-- ============================== -->
+            <!-- 2.1 Tab: Dashboard             -->
+            <!-- ============================== -->
+            <section id="content-dashboard" class="space-y-6">
+                <!-- Headline Card & Quick Actions -->
+                <div class="bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-2xl p-6 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 id="setting-org-title" class="text-2xl font-bold">ศูนย์ปฏิบัติการฉุกเฉินและควบคุมโรคไข้เลือดออก SRRT</h2>
+                        <p class="text-sm text-rose-100 mt-1">แสดงผลวิเคราะห์การระบาดและดัชนีลูกน้ำยุงลายในระดับครัวเรือนแบบเรียลไทม์</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="fetchDashboardData()" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white text-sm font-semibold transition-all">
+                            <i class="fa-solid fa-arrows-rotate mr-1"></i> รีเฟรชข้อมูล
+                        </button>
+                        <button onclick="exportDashboardPDF()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 rounded-xl text-white text-sm font-semibold transition-all">
+                            <i class="fa-solid fa-file-pdf mr-1"></i> พิมพ์รายงาน PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Cards Row -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3">
+                        <div class="p-3 bg-red-100 text-red-600 rounded-lg">
+                            <i class="fa-solid fa-user-doctor text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">ผู้ป่วยสะสม</span>
+                            <span id="kpi-patients-count" class="text-xl font-extrabold text-slate-900">0</span> <span class="text-xs text-slate-400">ราย</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3">
+                        <div class="p-3 bg-blue-100 text-blue-600 rounded-lg">
+                            <i class="fa-solid fa-house-chimney text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">บ้านสำรวจ</span>
+                            <span id="kpi-surveys-count" class="text-xl font-extrabold text-slate-900">0</span> <span class="text-xs text-slate-400">หลัง</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3">
+                        <div class="p-3 bg-orange-100 text-orange-600 rounded-lg">
+                            <i class="fa-solid fa-bug text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">พบลูกน้ำยุงลาย</span>
+                            <span id="kpi-positive-houses" class="text-xl font-extrabold text-slate-900">0</span> <span class="text-xs text-slate-400">หลัง</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3">
+                        <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg">
+                            <i class="fa-solid fa-spray-can text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">พ่นสารเคมีแล้ว</span>
+                            <span id="kpi-fogged-count" class="text-xl font-extrabold text-slate-900">0</span> <span class="text-xs text-slate-400">ครั้ง</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3">
+                        <div class="p-3 bg-indigo-100 text-indigo-600 rounded-lg">
+                            <i class="fa-solid fa-chart-pie text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">ดัชนี HI (เป้า &lt; 10)</span>
+                            <span id="kpi-hi-index" class="text-xl font-extrabold text-red-600">0.00</span> <span class="text-xs text-slate-400">%</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center space-x-3">
+                        <div class="p-3 bg-purple-100 text-purple-600 rounded-lg">
+                            <i class="fa-solid fa-percent text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">ดัชนี CI</span>
+                            <span id="kpi-ci-index" class="text-xl font-extrabold text-blue-600">0.00</span> <span class="text-xs text-slate-400">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-800 text-sm">สถิติผู้ป่วยรายเดือน (ปีปัจจุบัน)</h3>
+                            <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">จำนวนราย</span>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="monthlyPatientsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-800 text-sm">เปรียบเทียบค่าดัชนีความหนาแน่นลูกน้ำยุงลาย (HI / CI) รายหมู่บ้าน</h3>
+                            <span class="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">ร้อยละ (%)</span>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="villageHiCiChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Patient / Notification Activity Log -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4"><i class="fa-solid fa-bell text-rose-600 mr-1 animate-pulse"></i> ข้อมูลผู้ป่วยและสถานะติดตามควบคุมโรค</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+                                    <th class="p-3">วันที่เริ่มป่วย</th>
+                                    <th class="p-3">ผู้ป่วย</th>
+                                    <th class="p-3">หมู่บ้าน</th>
+                                    <th class="p-3">พิกัดทางภูมิศาสตร์</th>
+                                    <th class="p-3">ผลตรวจวินิจฉัย</th>
+                                    <th class="p-3 text-right">สถานะควบคุมโรค (รัศมี 100ม.)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-recent-patients" class="divide-y divide-slate-50">
+                                <!-- Dynamic Load -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================== -->
+            <!-- 2.2 Tab: GIS Map               -->
+            <!-- ============================== -->
+            <section id="content-gis" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Sidebar Controls -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-5 lg:col-span-1">
+                        <h3 class="font-bold text-slate-900 border-b pb-3 text-base">ตัวกรองและการค้นหา</h3>
+                        
+                        <!-- Search Box -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">ค้นหาผู้ป่วย / เลขที่บ้าน</label>
+                            <div class="relative">
+                                <input type="text" id="map-search-query" oninput="filterMapElements()" placeholder="พิมพ์ชื่อผู้ป่วย หรือ บ้านเลขที่..." 
+                                    class="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-red-500">
+                                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-3 text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+
+                        <!-- Buffer Range Selection -->
+                        <div class="space-y-2">
+                            <span class="block text-xs font-semibold text-slate-500">เปิด-ปิด รัศมีควบคุมโรค</span>
+                            <div class="space-y-2">
+                                <label class="flex items-center space-x-2 text-xs cursor-pointer">
+                                    <input type="checkbox" id="chk-radius-50" checked onchange="toggleRadiusCircles()" class="rounded text-red-500 focus:ring-red-400">
+                                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-red-400/20 border border-red-400 inline-block rounded-full"></span> 50 เมตร</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs cursor-pointer">
+                                    <input type="checkbox" id="chk-radius-100" checked onchange="toggleRadiusCircles()" class="rounded text-amber-500 focus:ring-amber-400">
+                                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-amber-400/20 border border-amber-400 inline-block rounded-full"></span> 100 เมตร (ควบคุม)</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs cursor-pointer">
+                                    <input type="checkbox" id="chk-radius-150" checked onchange="toggleRadiusCircles()" class="rounded text-yellow-500 focus:ring-yellow-400">
+                                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-yellow-400/20 border border-yellow-400 inline-block rounded-full"></span> 150 เมตร</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs cursor-pointer">
+                                    <input type="checkbox" id="chk-radius-200" checked onchange="toggleRadiusCircles()" class="rounded text-blue-500 focus:ring-blue-400">
+                                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-blue-400/20 border border-blue-400 inline-block rounded-full"></span> 200 เมตร</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Marker Type Selection -->
+                        <div class="space-y-2 pt-2 border-t">
+                            <span class="block text-xs font-semibold text-slate-500">ประเภทหมุดตำแหน่ง</span>
+                            <div class="space-y-2">
+                                <label class="flex items-center space-x-2 text-xs cursor-pointer">
+                                    <input type="checkbox" id="chk-marker-patient" checked onchange="filterMapElements()" class="rounded text-red-600">
+                                    <span>🟥 ผู้ป่วยระบาดสะสม (<span id="count-m-patient">0</span>)</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs cursor-pointer">
+                                    <input type="checkbox" id="chk-marker-house" checked onchange="filterMapElements()" class="rounded text-blue-600">
+                                    <span>🟦 บ้านสำรวจปลอดลูกน้ำ (<span id="count-m-house">0</span>)</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs cursor-pointer">
+                                    <input type="checkbox" id="chk-marker-survey-positive" checked onchange="filterMapElements()" class="rounded text-orange-500">
+                                    <span>🟨 บ้านสำรวจพบลูกน้ำยุงลาย (<span id="count-m-positive">0</span>)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Quick Action buttons inside Map -->
+                        <button onclick="zoomToCurrentLocation()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-location-crosshairs text-rose-500"></i> ค้นหาตำแหน่งปัจจุบันของฉัน
+                        </button>
+                    </div>
+
+                    <!-- Map Display Box -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 lg:col-span-3 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-2 px-2">
+                                <span class="text-xs font-bold text-slate-700">แผนที่แสดงผลเชิงพื้นที่ระบาดวิทยา</span>
+                                <span class="text-[11px] text-slate-400"><i class="fa-solid fa-info-circle mr-1"></i>คลิกปักหมุดเพื่อตรวจสอบพิกัด และรัศมีการแพร่กระจายไข้เลือดออก</span>
+                            </div>
+                            <div id="map" class="rounded-xl overflow-hidden border border-slate-100"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================== -->
+            <!-- 2.3 Tab: Patients (ผู้ป่วย)     -->
+            <!-- ============================== -->
+            <section id="content-patients" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">ทะเบียนและประวัติรายบุคคลผู้ป่วย</h2>
+                            <p class="text-xs text-slate-500">เก็บประวัติผู้ป่วย ผลตรวจ Lab ตรวจหาพิกัดเพื่อกำหนดเขตพ่นละอองเคมีฆ่ายุงตัวแก่</p>
+                        </div>
+                        <div class="flex space-x-2 w-full sm:w-auto">
+                            <button id="btn-add-patient-ui" onclick="openPatientModal()" class="px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold rounded-xl text-sm flex items-center gap-1.5 hover:opacity-90 shadow-md">
+                                <i class="fa-solid fa-user-plus"></i> เพิ่มผู้ป่วยใหม่
+                            </button>
+                            <button onclick="exportCSV('patients')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+                        </div>
+                    </div>
+
+                    <!-- Search / Table control -->
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="patient-search" placeholder="ค้นหาตาม HN, CID, ชื่อผู้ป่วย..." 
+                            class="px-4 py-2 border border-slate-200 rounded-lg text-sm w-full max-w-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                            oninput="renderPatientTable()">
+                    </div>
+
+                    <!-- Patients Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+                                    <th class="p-3">HN / CID</th>
+                                    <th class="p-3">ชื่อ-นามสกุล</th>
+                                    <th class="p-3">อายุ / เพศ</th>
+                                    <th class="p-3">ที่อยู่</th>
+                                    <th class="p-3">วันที่ป่วย</th>
+                                    <th class="p-3">ผลตรวจโรค</th>
+                                    <th class="p-3">สถานะพ่นเคมี</th>
+                                    <th class="p-3 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patient-table-body" class="divide-y divide-slate-100">
+                                <!-- Patients Rows Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================== -->
+            <!-- 2.4 Tab: Surveys (สำรวจลูกน้ำ)   -->
+            <!-- ============================== -->
+            <section id="content-surveys" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">บันทึกข้อมูลการสำรวจลูกน้ำยุงลายระดับครัวเรือน (อสม.)</h2>
+                            <p class="text-xs text-slate-500">รวบรวมค่าดัชนีทางระบาดวิทยาเพื่อตรวจหาจุดเสี่ยงสูงของการกระจายยุงลาย</p>
+                        </div>
+                        <div class="flex space-x-2 w-full sm:w-auto">
+                            <button id="btn-add-survey-ui" onclick="openSurveyModal()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold rounded-xl text-sm flex items-center gap-1.5 hover:opacity-90 shadow-md">
+                                <i class="fa-solid fa-bug"></i> บันทึกผลการสำรวจใหม่
+                            </button>
+                            <button onclick="exportCSV('surveys')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+                        </div>
+                    </div>
+
+                    <!-- Surveys Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+                                    <th class="p-3">บ้านเลขที่/หมู่</th>
+                                    <th class="p-3">เจ้าของบ้าน</th>
+                                    <th class="p-3">ภาชนะทั้งหมด</th>
+                                    <th class="p-3">พบลูกน้ำ</th>
+                                    <th class="p-3">ผลการตรวจความปลอดภัย</th>
+                                    <th class="p-3">ผู้สำรวจ</th>
+                                    <th class="p-3">วัน-เวลาบันทึก</th>
+                                    <th class="p-3 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="survey-table-body" class="divide-y divide-slate-100">
+                                <!-- Survey Rows Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================== -->
+            <!-- 2.5 Tab: Fogging (พ่นเคมีกำจัดยุง)-->
+            <!-- ============================== -->
+            <section id="content-fogging" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">บันทึกประวัติการฉีดพ่นเคมีและสารกำจัดตัวยุงลายแก่</h2>
+                            <p class="text-xs text-slate-500">บันทึกการส่งหน่วยงานตอบโต้ภัยเร่งด่วนเพื่อพ่นละอองเคมีรอบบ้านผู้ป่วยไข้เลือดออก</p>
+                        </div>
+                        <div class="flex space-x-2 w-full sm:w-auto">
+                            <button id="btn-add-fogging-ui" onclick="openFoggingModal()" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-xl text-sm flex items-center gap-1.5 hover:opacity-90 shadow-md">
+                                <i class="fa-solid fa-spray-can"></i> บันทึกงานพ่นสารเคมีใหม่
+                            </button>
+                            <button onclick="exportCSV('foggings')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+                        </div>
+                    </div>
+
+                    <!-- Fogging Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+                                    <th class="p-3">ผู้ป่วยอ้างอิง</th>
+                                    <th class="p-3">รัศมีดำเนินการ</th>
+                                    <th class="p-3">บ้านในรัศมีควบคุม</th>
+                                    <th class="p-3">ทีมปฏิบัติงานหลัก</th>
+                                    <th class="p-3">วันและเวลาปฏิบัติการ</th>
+                                    <th class="p-3">ผลลัพธ์ / ความเรียบร้อย</th>
+                                    <th class="p-3 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fogging-table-body" class="divide-y divide-slate-100">
+                                <!-- Fogging Rows Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================== -->
+            <!-- 2.6 Tab: Settings (ตั้งค่าระบบ)-->
+            <!-- ============================== -->
+            <section id="content-settings" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 max-w-2xl mx-auto">
+                    <h2 class="text-lg font-bold text-slate-900 border-b pb-3 mb-5"><i class="fa-solid fa-gear text-slate-600 mr-1"></i> ตั้งค่าข้อมูลหน่วยงาน</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Google Apps Script URL API</label>
+                            <input type="text" id="setting-api-url" class="w-full px-4 py-2.5 border rounded-lg text-sm bg-slate-50 focus:ring-1 focus:ring-red-500 text-slate-500" readonly>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อหน่วยงาน</label>
+                                <input type="text" id="setting-org-input" placeholder="โรงพยาบาลส่งเสริมสุขภาพตำบล..." class="w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-1 focus:ring-red-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">จังหวัด</label>
+                                <input type="text" id="setting-province" class="w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-1 focus:ring-red-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">อำเภอ</label>
+                                <input type="text" id="setting-district" class="w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-1 focus:ring-red-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">ตำบล</label>
+                                <input type="text" id="setting-subdistrict" class="w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-1 focus:ring-red-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">LINE Token</label>
+                                <input type="password" id="setting-line-token" placeholder="LINE Notify Token" class="w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-1 focus:ring-red-500">
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t flex justify-end">
+                            <button id="btn-save-settings-ui" onclick="saveLocalSettings()" class="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-all">
+                                <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการตั้งค่า
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-slate-100 border-t border-slate-200 py-4 mt-8">
+            <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+                © 2026 Dengue SRRT Smart GIS Dashboard | รพ.สต.โนนทองอินทร์ ต.โนนทองอินทร์ อ.กู่แก้ว จ.อุดรธานี
+            </div>
+        </footer>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. Modal Forms & Utilities                 -->
+    <!-- ========================================== -->
+
+    <!-- Modal: Patient Form -->
+    <div id="modal-patient" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-slate-900 mb-4 border-b pb-2" id="modal-patient-title">บันทึกรายชื่อผู้ป่วยไข้เลือดออกใหม่</h3>
+            <form id="form-patient" onsubmit="savePatient(event)" class="space-y-4">
+                <input type="hidden" id="p-index">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">เลขบัตรประชาชน (CID)</label>
+                        <input type="text" id="p-cid" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="13 หลัก">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">เลขทะเบียนคนไข้ (HN)</label>
+                        <input type="text" id="p-hn" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อ-นามสกุล</label>
+                        <input type="text" id="p-name" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">อายุ (ปี)</label>
+                            <input type="number" id="p-age" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">เพศ</label>
+                            <select id="p-gender" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                                <option value="ชาย">ชาย</option>
+                                <option value="หญิง">หญิง</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ที่อยู่/บ้านเลขที่</label>
+                        <input type="text" id="p-address" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="เช่น 99/1">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">หมู่ที่</label>
+                        <input type="number" id="p-village" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="เช่น 2">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ละติจูด (Latitude)</label>
+                        <input type="text" id="p-lat" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="17.xxxx">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ลองจิจูด (Longitude)</label>
+                        <input type="text" id="p-lng" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="102.xxxx">
+                    </div>
+                </div>
+                <button type="button" onclick="getFormLocation('p-lat', 'p-lng')" class="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] rounded font-semibold transition-all">
+                    🎯 ดึงพิกัดตามตำแหน่งปัจจุบันของคุณ
+                </button>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">วันที่เริ่มป่วย</label>
+                        <input type="date" id="p-date-onset" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ผลตรวจยืนยันโรค</label>
+                        <select id="p-result" required class="w-full px-3 py-2 border rounded-lg text-xs text-red-600 font-bold">
+                            <option value="Dengue Fever (DF)">Dengue Fever (DF)</option>
+                            <option value="Dengue Hemorrhagic Fever (DHF)">Dengue Hemorrhagic Fever (DHF)</option>
+                            <option value="Dengue Shock Syndrome (DSS)">Dengue Shock Syndrome (DSS)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-4 border-t">
+                    <button type="button" onclick="closePatientModal()" class="px-4 py-2 border rounded-lg text-xs">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-semibold">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Survey Form -->
+    <div id="modal-survey" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-slate-900 mb-4 border-b pb-2" id="modal-survey-title">บันทึกผลการสำรวจลูกน้ำยุงลายรายบ้าน</h3>
+            <form id="form-survey" onsubmit="saveSurvey(event)" class="space-y-4">
+                <input type="hidden" id="s-index">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">บ้านเลขที่</label>
+                        <input type="text" id="s-address" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="เช่น 45/2">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">หมู่ที่</label>
+                        <input type="number" id="s-village" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="เช่น 4">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อเจ้าของบ้าน/หัวหน้าครอบครัว</label>
+                    <input type="text" id="s-owner" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนภาชนะที่สํารวจทั้งหมด</label>
+                        <input type="number" id="s-containers" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="จำนวนกระถาง ถัง น้ำดื่ม">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนภาชนะที่พบลูกน้ำ</label>
+                        <input type="number" id="s-positives" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="หากไม่พบระบุ 0">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ละติจูด (พิกัดบ้าน)</label>
+                        <input type="text" id="s-lat" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ลองจิจูด (พิกัดบ้าน)</label>
+                        <input type="text" id="s-lng" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                    </div>
+                </div>
+                <button type="button" onclick="getFormLocation('s-lat', 's-lng')" class="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] rounded font-semibold transition-all">
+                    🎯 ดึงพิกัดตามตำแหน่งปัจจุบันของคุณ
+                </button>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อ-สกุล อสม. ผู้สำรวจ</label>
+                    <input type="text" id="s-surveyor" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="ชื่อ อสม. ประจำหมู่บ้าน">
+                </div>
+                <div class="flex justify-end space-x-2 pt-4 border-t">
+                    <button type="button" onclick="closeSurveyModal()" class="px-4 py-2 border rounded-lg text-xs">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Fogging Form -->
+    <div id="modal-fogging" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-slate-900 mb-4 border-b pb-2">บันทึกข้อมูลการพ่นเคมีพ่นควบคุมโรค</h3>
+            <form id="form-fogging" onsubmit="saveFogging(event)" class="space-y-4">
+                <input type="hidden" id="f-index">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">เลือกชื่อผู้ป่วยที่ใช้อ้างอิงควบคุมโรค</label>
+                    <select id="f-patient" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                        <!-- Dynamic load -->
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">กำหนดรัศมีการพ่นสารเคมี</label>
+                        <select id="f-radius" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                            <option value="50">50 เมตร</option>
+                            <option value="100" selected>100 เมตร</option>
+                            <option value="150">150 เมตร</option>
+                            <option value="200">200 เมตร</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ประมาณจำนวนบ้านในรัศมี</label>
+                        <input type="number" id="f-houses" required class="w-full px-3 py-2 border rounded-lg text-xs" value="15">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อหน่วยงาน / ทีมพ่นเคมีปฏิบัติงาน</label>
+                    <input type="text" id="f-team" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="ทีม SRRT อำเภอ หรือ ทต.โนนทองอินทร์">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายละเอียดเพิ่มเติม</label>
+                    <textarea id="f-notes" class="w-full px-3 py-2 border rounded-lg text-xs" rows="3" placeholder="ระบุระดับความครอบคลุมของการพ่นเคมี และข้อสังเกตเพิ่มเติม"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 pt-4 border-t">
+                    <button type="button" onclick="closeFoggingModal()" class="px-4 py-2 border rounded-lg text-xs">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold">บันทึกประวัติ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- 4. MAIN SYSTEM JAVASCRIPT CONTROLLER       -->
+    <!-- ========================================== -->
+    <script>
+        let apiEndpoint = localStorage.getItem('dengue_api_url') || "";
+        let patients = [];
+        let surveys = [];
+        let foggings = [];
+        let currentRole = localStorage.getItem('dengue_user_role') || "ADMIN";
+        
+        let mapInstance = null;
+        let mapMarkers = [];
+        let mapCircles = [];
+        let monthlyChart = null;
+        let indexChart = null;
+
+        window.onload = function() {
+            document.getElementById('user-role-selector').value = currentRole;
+            initAppThemeAndConnection();
+        }
+
+        function changeUserRole() {
+            currentRole = document.getElementById('user-role-selector').value;
+            localStorage.setItem('dengue_user_role', currentRole);
+            applyRolePermissions();
+            showToast(`เปลี่ยนสิทธิ์ใช้งานเป็น ${currentRole}`, 'info');
+        }
+
+        // ระบบควบคุมสิทธิ์การเขียนลบแก้ไขข้อมูล (RBAC)
+        function applyRolePermissions() {
+            const isReadWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT');
+            const isOsm = (currentRole === 'OSM');
+            
+            // ซ่อนหรือแสดงปุ่มควบคุมตามความเหมาะสมของสิทธิ์
+            document.getElementById('btn-add-patient-ui').style.display = isReadWrite ? 'flex' : 'none';
+            document.getElementById('btn-add-survey-ui').style.display = (isReadWrite || isOsm) ? 'flex' : 'none';
+            document.getElementById('btn-add-fogging-ui').style.display = isReadWrite ? 'flex' : 'none';
+            document.getElementById('btn-save-settings-ui').style.display = (currentRole === 'ADMIN') ? 'block' : 'none';
+
+            // รีเรนเดอร์ตารางเพื่อเอาปุ่มลบออกสำหรับคนสิทธิ์ต่ำ
+            renderPatientTable();
+            renderSurveyTable();
+            renderFoggingTable();
+        }
+
+        function initAppThemeAndConnection() {
+            if (!apiEndpoint) {
+                document.getElementById('setup-screen').classList.remove('hidden');
+                document.getElementById('main-screen').classList.add('hidden');
+            } else {
+                document.getElementById('setup-screen').classList.add('hidden');
+                document.getElementById('main-screen').classList.remove('hidden');
+                document.getElementById('setting-api-url').value = apiEndpoint;
+                
+                document.getElementById('setting-org-input').value = localStorage.getItem('dengue_org_name') || "รพ.สต.โนนทองอินทร์";
+                document.getElementById('setting-province').value = localStorage.getItem('dengue_province') || "อุดรธานี";
+                document.getElementById('setting-district').value = localStorage.getItem('dengue_district') || "กู่แก้ว";
+                document.getElementById('setting-subdistrict').value = localStorage.getItem('dengue_subdistrict') || "โนนทองอินทร์";
+                
+                applySettingsText();
+                applyRolePermissions();
+                fetchDashboardData();
+            }
+        }
+
+        async function setupSystemConnection() {
+            const urlInput = document.getElementById('api-url-input').value.trim();
+            if (!urlInput) {
+                Swal.fire('ข้อผิดพลาด', 'กรุณาระบุ URL ของ Google Apps Script API', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'กำลังเชื่อมต่อและตั้งค่าระบบ...',
+                html: 'ระบบกำลังเริ่มตรวจสอบโครงสร้างฐานข้อมูลและเพิ่มข้อมูลจำลอง กรุณารอประมาณ 5-10 วินาที...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const response = await fetch(`${urlInput}?action=setup`, { method: 'GET' });
+                const resData = await response.json();
+
+                if (resData.status === 'success') {
+                    localStorage.setItem('dengue_api_url', urlInput);
+                    apiEndpoint = urlInput;
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'ตั้งค่าระบบสำเร็จ!',
+                        text: 'โครงสร้างฐานข้อมูลและชีตตัวอย่างพร้อมใช้งานบน Google Sheets แล้ว',
+                        confirmButtonText: 'เข้าสู่ Dashboard'
+                    }).then(() => {
+                        initAppThemeAndConnection();
+                    });
+                } else {
+                    Swal.fire('การเชื่อมต่อล้มเหลว', resData.message || 'กรุณาตรวจสอบสิทธิ์การแชร์ของสคริปต์', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เชื่อมต่อล้มเหลว',
+                    html: `กรุณาตรวจสอบว่า:<br>
+                           1. ได้ติดตั้ง Apps Script และเลือกเมนู 'Deploy as Web App' แล้วหรือยัง<br>
+                           2. กำหนดสิทธิ์การเข้าถึงเป็น 'Everyone' (ทุกคน)<br>
+                           3. คัดลอก URL ของ Web App ถูกต้อง (ต้องลงท้ายด้วย /exec)`
+                });
+            }
+        }
+
+        function applySettingsText() {
+            const orgName = localStorage.getItem('dengue_org_name') || "รพ.สต.โนนทองอินทร์";
+            document.getElementById('setting-org-title').innerText = `ศูนย์ปฏิบัติการฉุกเฉินระบาดวิทยา ${orgName}`;
+        }
+
+        function saveLocalSettings() {
+            if(currentRole !== 'ADMIN') {
+                Swal.fire('ไม่ได้รับอนุญาต', 'เฉพาะ ADMIN เท่านั้นที่จะเข้าถึงระบบตั้งค่าหลักได้', 'warning');
+                return;
+            }
+            const orgInput = document.getElementById('setting-org-input').value;
+            const province = document.getElementById('setting-province').value;
+            const district = document.getElementById('setting-district').value;
+            const subdistrict = document.getElementById('setting-subdistrict').value;
+            const lineToken = document.getElementById('setting-line-token').value;
+
+            localStorage.setItem('dengue_org_name', orgInput);
+            localStorage.setItem('dengue_province', province);
+            localStorage.setItem('dengue_district', district);
+            localStorage.setItem('dengue_subdistrict', subdistrict);
+            if(lineToken) {
+                localStorage.setItem('dengue_line_token', lineToken);
+            }
+
+            applySettingsText();
+            Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าระบบเรียบร้อยแล้ว', 'success');
+        }
+
+        function disconnectSystem() {
+            Swal.fire({
+                title: 'ต้องการตัดการเชื่อมต่อระบบ?',
+                text: "ระบบจะล้างค่า API URL ของเซสชันปัจจุบัน",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#DC2626',
+                cancelButtonColor: '#64748B',
+                confirmButtonText: 'ใช่, ตัดการเชื่อมต่อ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('dengue_api_url');
+                    apiEndpoint = "";
+                    initAppThemeAndConnection();
+                }
+            });
+        }
+
+        async function fetchDashboardData() {
+            if (!apiEndpoint) return;
+            
+            try {
+                const response = await fetch(`${apiEndpoint}?action=dashboard`);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    patients = result.data.patients || [];
+                    surveys = result.data.surveys || [];
+                    foggings = result.data.foggings || [];
+                    
+                    // บันทึกสำรองข้อมูลล่าสุดเข้าเครื่อง
+                    localStorage.setItem('cached_patients', JSON.stringify(patients));
+                    localStorage.setItem('cached_surveys', JSON.stringify(surveys));
+                    localStorage.setItem('cached_foggings', JSON.stringify(foggings));
+                    
+                    document.getElementById('sync-indicator').classList.add('hidden');
+                    
+                    updateKpis();
+                    renderRecentPatients();
+                    initCharts();
+                    initLeafletMap();
+                    
+                    renderPatientTable();
+                    renderSurveyTable();
+                    renderFoggingTable();
+                    updatePatientSelects();
+                }
+            } catch (error) {
+                console.warn("API Offline, restoring from local storage cache...", error);
+                document.getElementById('sync-indicator').classList.remove('hidden');
+                
+                // คืนข้อมูลแคช
+                patients = JSON.parse(localStorage.getItem('cached_patients')) || [];
+                surveys = JSON.parse(localStorage.getItem('cached_surveys')) || [];
+                foggings = JSON.parse(localStorage.getItem('cached_foggings')) || [];
+                
+                updateKpis();
+                renderRecentPatients();
+                initCharts();
+                initLeafletMap();
+                
+                renderPatientTable();
+                renderSurveyTable();
+                renderFoggingTable();
+                updatePatientSelects();
+            }
+        }
+
+        function showToast(message, icon = 'success') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            Toast.fire({ icon: icon, title: message });
+        }
+
+        function updateKpis() {
+            document.getElementById('kpi-patients-count').innerText = patients.length;
+            document.getElementById('kpi-surveys-count').innerText = surveys.length;
+            
+            const positives = surveys.filter(s => parseInt(s.positives) > 0).length;
+            document.getElementById('kpi-positive-houses').innerText = positives;
+            document.getElementById('kpi-fogged-count').innerText = foggings.length;
+
+            let hi = 0;
+            if(surveys.length > 0) {
+                hi = (positives / surveys.length) * 100;
+            }
+            document.getElementById('kpi-hi-index').innerText = hi.toFixed(2);
+            
+            // คำนวณค่าดัชนีภาชนะ CI ทั่วบริเวณ
+            let totalContainers = 0;
+            let totalPositives = 0;
+            surveys.forEach(s => {
+                totalContainers += parseInt(s.containers || 0);
+                totalPositives += parseInt(s.positives || 0);
+            });
+            let ci = totalContainers > 0 ? (totalPositives / totalContainers) * 100 : 0;
+            document.getElementById('kpi-ci-index').innerText = ci.toFixed(2);
+            
+            document.getElementById('count-m-patient').innerText = patients.length;
+            document.getElementById('count-m-house').innerText = surveys.filter(s => parseInt(s.positives) === 0).length;
+            document.getElementById('count-m-positive').innerText = positives;
+        }
+
+        function renderRecentPatients() {
+            const listContainer = document.getElementById('dashboard-recent-patients');
+            listContainer.innerHTML = '';
+            
+            const sorted = [...patients].reverse().slice(0, 5);
+            
+            if(sorted.length === 0) {
+                listContainer.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">ยังไม่มีประวัติการแจ้งผู้ป่วย</td></tr>`;
+                return;
+            }
+
+            sorted.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                
+                const isFogged = foggings.some(f => f.patient_id == p.hn || f.patient_id == p.name);
+                const statusBadge = isFogged 
+                    ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full"><i class="fa-solid fa-circle-check"></i> ดำเนินการแล้ว</span>`
+                    : `<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-full animate-pulse"><i class="fa-solid fa-circle-info"></i> รอดำเนินการ</span>`;
+
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-700">${p.date_onset}</td>
+                    <td class="p-3">
+                        <div class="font-bold text-slate-800">${p.name}</div>
+                        <div class="text-[10px] text-slate-400">HN: ${p.hn} | CID: ${p.cid}</div>
+                    </td>
+                    <td class="p-3 text-slate-600">หมู่ที่ ${p.village}</td>
+                    <td class="p-3 font-mono text-xs text-slate-500">${parseFloat(p.lat || 0).toFixed(4)}, ${parseFloat(p.lng || 0).toFixed(4)}</td>
+                    <td class="p-3"><span class="text-xs bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded">${p.result}</span></td>
+                    <td class="p-3 text-right">${statusBadge}</td>
+                `;
+                listContainer.appendChild(tr);
+            });
+        }
+
+        function initCharts() {
+            const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            const patientCounts = Array(12).fill(0);
+            
+            patients.forEach(p => {
+                if(p.date_onset) {
+                    const monthIndex = new Date(p.date_onset).getMonth();
+                    if(!isNaN(monthIndex)) {
+                        patientCounts[monthIndex] += 1;
+                    }
+                }
+            });
+
+            if (monthlyChart) monthlyChart.destroy();
+            if (indexChart) indexChart.destroy();
+
+            const ctx1 = document.getElementById('monthlyPatientsChart').getContext('2d');
+            monthlyChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'ผู้ป่วยไข้เลือดออก (ราย)',
+                        data: patientCounts,
+                        backgroundColor: '#DC2626',
+                        borderColor: '#991B1B',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+            const villageSet = new Set(surveys.map(s => `หมู่ที่ ${s.village}`));
+            const villageLabels = Array.from(villageSet).sort();
+            const hiData = [];
+            const ciData = [];
+
+            villageLabels.forEach(vName => {
+                const vNum = vName.replace('หมู่ที่ ', '');
+                const vSurveys = surveys.filter(s => s.village == vNum);
+                const total = vSurveys.length;
+                const pos = vSurveys.filter(s => parseInt(s.positives) > 0).length;
+                
+                const hi = total > 0 ? (pos / total) * 100 : 0;
+                hiData.push(hi.toFixed(1));
+
+                let totalC = 0;
+                let posC = 0;
+                vSurveys.forEach(s => {
+                    totalC += parseInt(s.containers || 0);
+                    posC += parseInt(s.positives || 0);
+                });
+                const ci = totalC > 0 ? (posC / totalC) * 100 : 0;
+                ciData.push(ci.toFixed(1));
+            });
+
+            const ctx2 = document.getElementById('villageHiCiChart').getContext('2d');
+            indexChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: villageLabels,
+                    datasets: [
+                        {
+                            label: 'ค่า HI (House Index)',
+                            data: hiData,
+                            borderColor: '#DC2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'ค่า CI (Container Index)',
+                            data: ciData,
+                            borderColor: '#2563EB',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.className = "nav-tab px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 text-slate-600 hover:bg-slate-100";
+            });
+            
+            const activeTabBtn = document.getElementById(`tab-${tabId}`);
+            if(activeTabBtn) {
+                if(tabId === 'dashboard' || tabId === 'gis' || tabId === 'patients') {
+                    activeTabBtn.className = "nav-tab active px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 bg-red-50 text-red-600";
+                } else if(tabId === 'surveys') {
+                    activeTabBtn.className = "nav-tab active px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 bg-emerald-50 text-emerald-600";
+                } else if(tabId === 'fogging') {
+                    activeTabBtn.className = "nav-tab active px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 bg-indigo-50 text-indigo-600";
+                } else {
+                    activeTabBtn.className = "nav-tab active px-4 py-2 text-sm font-semibold rounded-lg flex items-center space-x-2 bg-slate-100 text-slate-800";
+                }
+            }
+
+            document.getElementById('content-dashboard').classList.add('hidden');
+            document.getElementById('content-gis').classList.add('hidden');
+            document.getElementById('content-patients').classList.add('hidden');
+            document.getElementById('content-surveys').classList.add('hidden');
+            document.getElementById('content-fogging').classList.add('hidden');
+            document.getElementById('content-settings').classList.add('hidden');
+
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
+
+            if (tabId === 'gis') {
+                setTimeout(() => {
+                    if (mapInstance) {
+                        mapInstance.invalidateSize();
+                    }
+                }, 200);
+            }
+        }
+
+        function initLeafletMap() {
+            if (mapInstance) return;
+
+            const defaultLat = 17.2651;
+            const defaultLng = 102.9850;
+
+            mapInstance = L.map('map').setView([defaultLat, defaultLng], 14);
+
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(mapInstance);
+
+            const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: '© Google Maps Satellite'
+            });
+
+            const baseMaps = {
+                "แผนที่ถนน (OpenStreetMap)": osm,
+                "ภาพดาวเทียม (Google Satellite)": satellite
+            };
+            L.control.layers(baseMaps).addTo(mapInstance);
+
+            plotMapData();
+        }
+
+        function plotMapData() {
+            if(!mapInstance) return;
+
+            mapMarkers.forEach(m => mapInstance.removeLayer(m));
+            mapCircles.forEach(c => mapInstance.removeLayer(c));
+            mapMarkers = [];
+            mapCircles = [];
+
+            patients.forEach(p => {
+                const lat = parseFloat(p.lat);
+                const lng = parseFloat(p.lng);
+                if (isNaN(lat) || isNaN(lng)) return;
+
+                const patientMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'patient-marker',
+                        html: `<div class="w-8 h-8 bg-red-600 border-2 border-white rounded-full flex items-center justify-center shadow-lg text-white font-bold text-sm"><i class="fa-solid fa-virus"></i></div>`,
+                        iconSize: [32, 32]
+                    })
+                });
+
+                const popupHtml = `
+                    <div class="p-1 font-sarabun text-slate-800">
+                        <strong class="text-rose-600 block text-sm"><i class="fa-solid fa-hospital-user mr-1"></i>ข้อมูลผู้ป่วยไข้เลือดออก</strong>
+                        <div class="mt-1.5 space-y-1 text-xs">
+                            <p><strong>ชื่อ-นามสกุล:</strong> ${p.name}</p>
+                            <p><strong>HN:</strong> ${p.hn} | <strong>อายุ:</strong> ${p.age} ปี</p>
+                            <p><strong>ที่อยู่:</strong> บ้านเลขที่ ${p.address} หมู่ที่ ${p.village}</p>
+                            <p><strong>วันที่เริ่มป่วย:</strong> ${p.date_onset}</p>
+                            <p><strong>ผลแล็บยืนยัน:</strong> <span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold text-[10px]">${p.result}</span></p>
+                        </div>
+                    </div>
+                `;
+
+                patientMarker.bindPopup(popupHtml);
+                patientMarker.addTo(mapInstance);
+                patientMarker.dataType = "patient";
+                patientMarker.searchText = `${p.name} ${p.address} ${p.hn}`;
+                mapMarkers.push(patientMarker);
+
+                const circle50 = L.circle([lat, lng], { radius: 50, color: '#f87171', fillColor: '#f87171', fillOpacity: 0.12 }).addTo(mapInstance);
+                const circle100 = L.circle([lat, lng], { radius: 100, color: '#fbbf24', fillColor: '#fbbf24', fillOpacity: 0.08 }).addTo(mapInstance);
+                const circle150 = L.circle([lat, lng], { radius: 150, color: '#fef08a', fillColor: '#fef08a', fillOpacity: 0.05 }).addTo(mapInstance);
+                const circle200 = L.circle([lat, lng], { radius: 200, color: '#60a5fa', fillColor: '#60a5fa', fillOpacity: 0.03 }).addTo(mapInstance);
+
+                circle50.radiusVal = 50;
+                circle100.radiusVal = 100;
+                circle150.radiusVal = 150;
+                circle200.radiusVal = 200;
+
+                mapCircles.push(circle50, circle100, circle150, circle200);
+            });
+
+            surveys.forEach(s => {
+                const lat = parseFloat(s.lat);
+                const lng = parseFloat(s.lng);
+                if (isNaN(lat) || isNaN(lng)) return;
+
+                const hasMosquito = parseInt(s.positives) > 0;
+                const markerColor = hasMosquito ? 'bg-amber-500' : 'bg-emerald-600';
+                const iconChar = hasMosquito ? '<i class="fa-solid fa-bug text-white text-[10px]"></i>' : '<i class="fa-solid fa-circle-check text-white text-[10px]"></i>';
+
+                const surveyMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'survey-marker',
+                        html: `<div class="w-5 h-5 ${markerColor} border border-white rounded-full flex items-center justify-center shadow">${iconChar}</div>`,
+                        iconSize: [20, 20]
+                    })
+                });
+
+                const popupHtml = `
+                    <div class="p-1 font-sarabun text-slate-800">
+                        <strong class="${hasMosquito ? 'text-amber-600' : 'text-emerald-700'} block text-sm">
+                            <i class="fa-solid fa-house mr-1"></i>${hasMosquito ? 'พบบ้านมีแหล่งรังโรค' : 'บ้านพักอาศัยปลอดลูกน้ำ'}
+                        </strong>
+                        <div class="mt-1.5 space-y-1 text-xs">
+                            <p><strong>เจ้าของบ้าน:</strong> ${s.owner}</p>
+                            <p><strong>ที่อยู่:</strong> เลขที่ ${s.address} หมู่ที่ ${s.village}</p>
+                            <p><strong>ภาชนะที่สำรวจ:</strong> ${s.containers} ใบ</p>
+                            <p class="${hasMosquito ? 'text-red-600 font-bold' : ''}"><strong>พบลูกน้ำยุงลาย:</strong> ${s.positives} กระบอก</p>
+                            <p class="text-slate-400 text-[10px]"><strong>ผู้สำรวจ:</strong> อสม.${s.surveyor} (${s.timestamp})</p>
+                        </div>
+                    </div>
+                `;
+
+                surveyMarker.bindPopup(popupHtml);
+                surveyMarker.addTo(mapInstance);
+                surveyMarker.dataType = hasMosquito ? "survey-positive" : "house";
+                surveyMarker.searchText = `${s.owner} ${s.address}`;
+                mapMarkers.push(surveyMarker);
+            });
+        }
+
+        function toggleRadiusCircles() {
+            const show50 = document.getElementById('chk-radius-50').checked;
+            const show100 = document.getElementById('chk-radius-100').checked;
+            const show150 = document.getElementById('chk-radius-150').checked;
+            const show200 = document.getElementById('chk-radius-200').checked;
+
+            mapCircles.forEach(circle => {
+                if(circle.radiusVal === 50) {
+                    show50 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                } else if(circle.radiusVal === 100) {
+                    show100 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                } else if(circle.radiusVal === 150) {
+                    show150 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                } else if(circle.radiusVal === 200) {
+                    show200 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                }
+            });
+        }
+
+        function filterMapElements() {
+            const query = document.getElementById('map-search-query').value.toLowerCase().trim();
+            const showPatient = document.getElementById('chk-marker-patient').checked;
+            const showHouse = document.getElementById('chk-marker-house').checked;
+            const showPositive = document.getElementById('chk-marker-survey-positive').checked;
+
+            mapMarkers.forEach(marker => {
+                let matchesType = false;
+                if(marker.dataType === "patient" && showPatient) matchesType = true;
+                if(marker.dataType === "house" && showHouse) matchesType = true;
+                if(marker.dataType === "survey-positive" && showPositive) matchesType = true;
+
+                let matchesSearch = true;
+                if(query) {
+                    matchesSearch = marker.searchText.toLowerCase().includes(query);
+                }
+
+                if(matchesType && matchesSearch) {
+                    marker.addTo(mapInstance);
+                } else {
+                    mapInstance.removeLayer(marker);
+                }
+            });
+        }
+
+        function zoomToCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    if (mapInstance) {
+                        mapInstance.setView([lat, lng], 17);
+                        L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                className: 'current-pos-marker',
+                                html: `<div class="w-4 h-4 bg-blue-500 border-2 border-white rounded-full animate-ping"></div>`,
+                                iconSize: [16, 16]
+                            })
+                        }).addTo(mapInstance).bindPopup("<b>คุณอยู่ที่นี่</b>").openPopup();
+                    }
+                }, () => {
+                    showToast("ไม่สามารถเข้าถึงพิกัด GPS ของอุปกรณ์คุณได้", "error");
+                });
+            }
+        }
+
+        function getFormLocation(latFieldId, lngFieldId) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    document.getElementById(latFieldId).value = position.coords.latitude.toFixed(6);
+                    document.getElementById(lngFieldId).value = position.coords.longitude.toFixed(6);
+                    showToast("ดึงพิกัดตาม GPS อุปกรณ์สำเร็จ");
+                }, () => {
+                    showToast("ดึงพิกัดล้มเหลว กรุณาอนุญาตให้ระบบเข้าถึงพิกัด หรือระบุพิกัดในฟอร์มด้วยตนเอง", "warning");
+                });
+            }
+        }
+
+        // ==============================================
+        // 5. C.R.U.D. หน้าผู้ป่วย (Patient Actions)
+        // ==============================================
+        function renderPatientTable() {
+            const tbody = document.getElementById('patient-table-body');
+            tbody.innerHTML = '';
+            const search = document.getElementById('patient-search').value.toLowerCase().trim();
+
+            const filtered = patients.filter(p => 
+                (p.name && p.name.toLowerCase().includes(search)) || 
+                (p.hn && p.hn.includes(search)) || 
+                (p.cid && p.cid.includes(search))
+            );
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">ไม่พบข้อมูลรายชื่อคนไข้ตามคำค้นหา</td></tr>`;
+                return;
+            }
+
+            const allowWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT');
+
+            filtered.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b transition-colors";
+
+                const isFogged = foggings.some(f => f.patient_id == p.hn || f.patient_id == p.name);
+                const statusBadge = isFogged 
+                    ? `<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded font-bold"><i class="fa-solid fa-circle-check"></i> พ่นเคมีแล้ว</span>`
+                    : `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded font-bold animate-pulse">รอพ่นเคมี</span>`;
+
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-700">${p.hn}<br><span class="text-xs text-slate-400">${p.cid}</span></td>
+                    <td class="p-3 font-bold text-slate-800">${p.name}</td>
+                    <td class="p-3">${p.age} ปี / ${p.gender}</td>
+                    <td class="p-3">บ้านเลขที่ ${p.address} หมู่ที่ ${p.village}</td>
+                    <td class="p-3 font-mono text-xs">${p.date_onset}</td>
+                    <td class="p-3"><span class="bg-red-50 text-red-700 text-xs font-bold px-2 py-1 rounded border border-red-100">${p.result}</span></td>
+                    <td class="p-3">${statusBadge}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex justify-center space-x-1.5" style="display: ${allowWrite ? 'flex' : 'none'}">
+                            <button onclick="editPatient(${index})" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-all" title="แก้ไข">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <button onclick="deletePatient('${p.hn}')" class="p-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded transition-all" title="ลบ">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                        <span style="display: ${allowWrite ? 'none' : 'inline'}" class="text-xs text-slate-400 font-mono">-</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openPatientModal() {
+            document.getElementById('form-patient').reset();
+            document.getElementById('p-index').value = "";
+            document.getElementById('modal-patient-title').innerText = "บันทึกรายชื่อผู้ป่วยไข้เลือดออกใหม่";
+            document.getElementById('modal-patient').classList.remove('hidden');
+        }
+
+        function closePatientModal() {
+            document.getElementById('modal-patient').classList.add('hidden');
+        }
+
+        function editPatient(index) {
+            const p = patients[index];
+            document.getElementById('p-index').value = index;
+            document.getElementById('p-cid').value = p.cid;
+            document.getElementById('p-hn').value = p.hn;
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-age').value = p.age;
+            document.getElementById('p-gender').value = p.gender;
+            document.getElementById('p-address').value = p.address;
+            document.getElementById('p-village').value = p.village;
+            document.getElementById('p-lat').value = p.lat;
+            document.getElementById('p-lng').value = p.lng;
+            document.getElementById('p-date-onset').value = p.date_onset;
+            document.getElementById('p-result').value = p.result;
+
+            document.getElementById('modal-patient-title').innerText = "แก้ไขข้อมูลผู้ป่วยไข้เลือดออก";
+            document.getElementById('modal-patient').classList.remove('hidden');
+        }
+
+        async function savePatient(e) {
+            e.preventDefault();
+            const index = document.getElementById('p-index').value;
+            
+            const payload = {
+                cid: document.getElementById('p-cid').value.trim(),
+                hn: document.getElementById('p-hn').value.trim(),
+                name: document.getElementById('p-name').value.trim(),
+                age: document.getElementById('p-age').value,
+                gender: document.getElementById('p-gender').value,
+                address: document.getElementById('p-address').value.trim(),
+                village: document.getElementById('p-village').value,
+                lat: document.getElementById('p-lat').value.trim(),
+                lng: document.getElementById('p-lng').value.trim(),
+                date_onset: document.getElementById('p-date-onset').value,
+                result: document.getElementById('p-result').value
+            };
+
+            Swal.fire({ title: 'กำลังบันทึกข้อมูลลงฐานข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const action = index === "" ? "add_patient" : "edit_patient";
+                const response = await fetch(`${apiEndpoint}?action=${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                    body: JSON.stringify(payload)
+                });
+                const res = await response.json();
+
+                if (res.status === 'success') {
+                    closePatientModal();
+                    Swal.fire('สำเร็จ!', 'ข้อมูลคนไข้ได้รับการจัดเก็บเป็นที่เรียบร้อย', 'success');
+                    fetchDashboardData();
+                } else {
+                    Swal.fire('ไม่สำเร็จ', res.message, 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire('เครือข่ายขัดข้อง', 'ระบบได้เก็บบันทึกสำรองข้อมูลชั่วคราวในอุปกรณ์แล้ว', 'warning');
+                // เพิ่มเข้าคลังชั่วคราวชั่วครู่
+                if(index === "") {
+                    patients.push(payload);
+                } else {
+                    patients[index] = payload;
+                }
+                localStorage.setItem('cached_patients', JSON.stringify(patients));
+                closePatientModal();
+                updateKpis();
+                renderPatientTable();
+            }
+        }
+
+        async function deletePatient(hn) {
+            Swal.fire({
+                title: 'ยืนยันลบผู้ป่วยรายนี้?',
+                text: "ข้อมูลผู้ป่วยและตำแหน่งที่ตรวจจะถูกถอนออกจากแผนที่เสี่ยงและชีตคนไข้ทันที",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#DC2626',
+                cancelButtonColor: '#64748B',
+                confirmButtonText: 'ยืนยันลบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'กำลังถอนรากข้อมูลคนไข้...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    try {
+                        const response = await fetch(`${apiEndpoint}?action=delete_patient`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                            body: JSON.stringify({ hn: hn })
+                        });
+                        const res = await response.json();
+                        if (res.status === 'success') {
+                            Swal.fire('สำเร็จ', 'ลบผู้ป่วยเรียบร้อย', 'success');
+                            fetchDashboardData();
+                        } else {
+                            Swal.fire('เกิดข้อผิดพลาด', res.message, 'error');
+                        }
+                    } catch (err) {
+                        Swal.fire('ผิดพลาด', 'ไม่สามารถคุยกับเครื่องปลายทางเพื่อสั่งลบข้อมูลได้', 'error');
+                    }
+                }
+            });
+        }
+
+
+        // ==============================================
+        // 6. C.R.U.D. สำรวจลูกน้ำ (Survey Actions)
+        // ==============================================
+        function renderSurveyTable() {
+            const tbody = document.getElementById('survey-table-body');
+            tbody.innerHTML = '';
+
+            if(surveys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">ยังไม่มีรายการบันทึกสำรวจลูกน้ำยุงลายระดับบ้านพักอาศัย</td></tr>`;
+                return;
+            }
+
+            const allowWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT' || currentRole === 'OSM');
+
+            surveys.forEach((s, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b";
+
+                const isPositive = parseInt(s.positives) > 0;
+                const safetyBadge = isPositive 
+                    ? `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-mosquito"></i> ตรวจพบลูกน้ำ</span>`
+                    : `<span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-circle-check"></i> ปลอดภัย</span>`;
+
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-800">บ้านเลขที่ ${s.address} หมู่ที่ ${s.village}</td>
+                    <td class="p-3">${s.owner}</td>
+                    <td class="p-3">${s.containers} ภาชนะ</td>
+                    <td class="p-3 font-bold ${isPositive ? 'text-amber-600' : 'text-emerald-700'}">${s.positives} จุด</td>
+                    <td class="p-3">${safetyBadge}</td>
+                    <td class="p-3 text-xs text-slate-500">อสม.${s.surveyor}</td>
+                    <td class="p-3 text-xs text-slate-400">${s.timestamp}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex justify-center space-x-1.5" style="display: ${allowWrite ? 'flex' : 'none'}">
+                            <button onclick="editSurvey(${index})" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-all" title="แก้ไข">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <button onclick="deleteSurvey(${index})" class="p-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded transition-all" title="ลบ">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                        <span style="display: ${allowWrite ? 'none' : 'inline'}" class="text-xs text-slate-400 font-mono">-</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openSurveyModal() {
+            document.getElementById('form-survey').reset();
+            document.getElementById('s-index').value = "";
+            document.getElementById('modal-survey-title').innerText = "บันทึกผลการสำรวจลูกน้ำยุงลายรายบ้าน";
+            document.getElementById('modal-survey').classList.remove('hidden');
+        }
+
+        function closeSurveyModal() {
+            document.getElementById('modal-survey').classList.add('hidden');
+        }
+
+        function editSurvey(index) {
+            const s = surveys[index];
+            document.getElementById('s-index').value = index;
+            document.getElementById('s-address').value = s.address;
+            document.getElementById('s-village').value = s.village;
+            document.getElementById('s-owner').value = s.owner;
+            document.getElementById('s-containers').value = s.containers;
+            document.getElementById('s-positives').value = s.positives;
+            document.getElementById('s-lat').value = s.lat;
+            document.getElementById('s-lng').value = s.lng;
+            document.getElementById('s-surveyor').value = s.surveyor;
+
+            document.getElementById('modal-survey-title').innerText = "แก้ไขข้อมูลผลการสำรวจลูกน้ำยุงลาย";
+            document.getElementById('modal-survey').classList.remove('hidden');
+        }
+
+        async function saveSurvey(e) {
+            e.preventDefault();
+            const index = document.getElementById('s-index').value;
+            
+            const payload = {
+                address: document.getElementById('s-address').value.trim(),
+                village: document.getElementById('s-village').value,
+                owner: document.getElementById('s-owner').value.trim(),
+                containers: document.getElementById('s-containers').value,
+                positives: document.getElementById('s-positives').value,
+                lat: document.getElementById('s-lat').value.trim(),
+                lng: document.getElementById('s-lng').value.trim(),
+                surveyor: document.getElementById('s-surveyor').value.trim()
+            };
+
+            Swal.fire({ title: 'กำลังบันทึกประวัติการสำรวจยุงลาย...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const action = index === "" ? "add_survey" : "edit_survey";
+                const response = await fetch(`${apiEndpoint}?action=${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                    body: JSON.stringify(payload)
+                });
+                const res = await response.json();
+
+                if(res.status === 'success') {
+                    closeSurveyModal();
+                    Swal.fire('สำเร็จ', 'บันทึกข้อมูลปรับปรุงลง Google Sheet เรียบร้อยแล้ว', 'success');
+                    fetchDashboardData();
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด', res.message, 'error');
+                }
+            } catch(e) {
+                // จัดการออฟไลน์หากเครือข่ายมีปัญหา
+                if(index === "") {
+                    surveys.push({ ...payload, timestamp: new Date().toLocaleString('th-TH') });
+                } else {
+                    surveys[index] = { ...payload, timestamp: surveys[index].timestamp + " (แก้ไขออฟไลน์)" };
+                }
+                localStorage.setItem('cached_surveys', JSON.stringify(surveys));
+                closeSurveyModal();
+                updateKpis();
+                renderSurveyTable();
+                Swal.fire('จัดเก็บข้อมูลแบบออฟไลน์สำเร็จ', 'ระบบบันทึกในอุปกรณ์ชั่วคราวแล้ว และจะซิงค์เมื่อสัญญาณกลับมาปกติ', 'info');
+            }
+        }
+
+        async function deleteSurvey(index) {
+            const item = surveys[index];
+            Swal.fire({
+                title: 'ต้องการลบข้อมูลการตรวจลูกน้ำหลังนี้?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#DC2626',
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then(async (r) => {
+                if(r.isConfirmed) {
+                    Swal.fire({ title: 'กำลังลบผล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    try {
+                        const response = await fetch(`${apiEndpoint}?action=delete_survey`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                            body: JSON.stringify({ address: item.address, owner: item.owner })
+                        });
+                        const res = await response.json();
+                        if(res.status === 'success') {
+                            Swal.fire('ลบข้อมูลเรียบร้อย', '', 'success');
+                            fetchDashboardData();
+                        } else {
+                            Swal.fire('ผิดพลาด', res.message, 'error');
+                        }
+                    } catch(err) {
+                        Swal.fire('เครือข่ายขัดข้อง', 'โปรดลองใหม่อีกครั้งหลังเปิดเน็ต', 'error');
+                    }
+                }
+            });
+        }
+
+
+        // ==============================================
+        // 7. C.R.U.D. บันทึกงานพ่นควบคุมโรค (Fogging Actions)
+        // ==============================================
+        function updatePatientSelects() {
+            const select = document.getElementById('f-patient');
+            select.innerHTML = '';
+            
+            if(patients.length === 0) {
+                select.innerHTML = `<option value="">-- ไม่มีคนไข้สะสม --</option>`;
+                return;
+            }
+
+            patients.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.hn;
+                opt.innerText = `${p.name} (HN: ${p.hn}) - หมู่ที่ ${p.village}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderFoggingTable() {
+            const tbody = document.getElementById('fogging-table-body');
+            tbody.innerHTML = '';
+
+            if(foggings.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">ยังไม่มีประวัติการส่งทีมควบคุมโรคเพื่อดำเนินการพ่นละอองสารเคมีในระบบขณะนี้</td></tr>`;
+                return;
+            }
+
+            const allowWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT');
+
+            foggings.forEach((f, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b";
+
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-800">${f.patient_id}</td>
+                    <td class="p-3"><span class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold">${f.radius} เมตร</span></td>
+                    <td class="p-3 font-bold">${f.houses_count} หลังคาเรือน</td>
+                    <td class="p-3 text-slate-600">${f.team}</td>
+                    <td class="p-3 text-xs text-slate-500">${f.timestamp}</td>
+                    <td class="p-3 font-semibold text-xs text-slate-500">${f.notes || '-'}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteFogging(${index})" style="display: ${allowWrite ? 'inline-block' : 'none'}" class="p-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded transition-all">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                        <span style="display: ${allowWrite ? 'none' : 'inline'}" class="text-xs text-slate-400">-</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openFoggingModal() {
+            document.getElementById('form-fogging').reset();
+            updatePatientSelects();
+            document.getElementById('f-index').value = "";
+            document.getElementById('modal-fogging').classList.remove('hidden');
+        }
+
+        function closeFoggingModal() {
+            document.getElementById('modal-fogging').classList.add('hidden');
+        }
+
+        async function saveFogging(e) {
+            e.preventDefault();
+            
+            const payload = {
+                patient_id: document.getElementById('f-patient').value,
+                radius: document.getElementById('f-radius').value,
+                houses_count: document.getElementById('f-houses').value,
+                team: document.getElementById('f-team').value.trim(),
+                notes: document.getElementById('f-notes').value.trim()
+            };
+
+            Swal.fire({ title: 'กำลังบันทึกประวัติการสเปรย์ฆ่ายุงตัวแก่...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const response = await fetch(`${apiEndpoint}?action=add_fogging`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                    body: JSON.stringify(payload)
+                });
+                const res = await response.json();
+
+                if(res.status === 'success') {
+                    closeFoggingModal();
+                    Swal.fire('พ่นสารควบคุมยุงแก่แล้ว!', 'ข้อมูลได้รับการจารึกลงระบบแล้วเรียบร้อย', 'success');
+                    fetchDashboardData();
+                } else {
+                    Swal.fire('บันทึกผิดพลาด', res.message, 'error');
+                }
+            } catch(e) {
+                foggings.push({ ...payload, timestamp: new Date().toLocaleString('th-TH') });
+                localStorage.setItem('cached_foggings', JSON.stringify(foggings));
+                closeFoggingModal();
+                updateKpis();
+                renderFoggingTable();
+                Swal.fire('จดจำสถานะออฟไลน์เรียบร้อย', 'ข้อมูลเก็บในเครือข่ายจำลองแล้ว', 'info');
+            }
+        }
+
+        async function deleteFogging(index) {
+            const item = foggings[index];
+            Swal.fire({
+                title: 'ยืนยันสั่งถอนข้อมูลการฉีดฉีดฉีดพ่นสารเคมีรายการนี้?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#DC2626',
+                confirmButtonText: 'ยืนยัน',
+                cancelButtonText: 'ยกเลิก'
+            }).then(async (r) => {
+                if(r.isConfirmed) {
+                    Swal.fire({ title: 'กำลังลบประวัติงานพ่นควบคุม...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    try {
+                        const response = await fetch(`${apiEndpoint}?action=delete_fogging`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                            body: JSON.stringify({ patient_id: item.patient_id, timestamp: item.timestamp })
+                        });
+                        const res = await response.json();
+                        if(res.status === 'success') {
+                            Swal.fire('ลบประวัติพ่นละอองควบคุมโรคสำเร็จ', '', 'success');
+                            fetchDashboardData();
+                        } else {
+                            Swal.fire('ผิดพลาด', res.message, 'error');
+                        }
+                    } catch(err) {
+                        Swal.fire('ตัดการเชื่อมต่อกับเซิร์ฟเวอร์', '', 'error');
+                    }
+                }
+            });
+        }
+
+        // CSV Export Helper
+        function exportCSV(type) {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            let fileName = `${type}_export.csv`;
+            
+            if (type === 'patients') {
+                csvContent += "HN,CID,Name,Age,Gender,Address,Village,Lat,Lng,DateOnset,Result\n";
+                patients.forEach(p => {
+                    csvContent += `"${p.hn}","${p.cid}","${p.name}","${p.age}","${p.gender}","${p.address}","${p.village}","${p.lat}","${p.lng}","${p.date_onset}","${p.result}"\n`;
+                });
+            } else if (type === 'surveys') {
+                csvContent += "Address,Village,Owner,Containers,Positives,Lat,Lng,Surveyor,Timestamp\n";
+                surveys.forEach(s => {
+                    csvContent += `"${s.address}","${s.village}","${s.owner}","${s.containers}","${s.positives}","${s.lat}","${s.lng}","${s.surveyor}","${s.timestamp}"\n`;
+                });
+            } else if (type === 'foggings') {
+                csvContent += "PatientID,Radius,HousesCount,Team,Notes,Timestamp\n";
+                foggings.forEach(f => {
+                    csvContent += `"${f.patient_id}","${f.radius}","${f.houses_count}","${f.team}","${f.notes}","${f.timestamp}"\n`;
+                });
+            }
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportDashboardPDF() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
