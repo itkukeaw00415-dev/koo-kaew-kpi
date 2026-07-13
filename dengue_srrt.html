@@ -475,7 +475,7 @@
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                         <div>
-                            <h2 class="text-lg font-bold text-slate-900">บันทึกประวัติการฉีดพ่นเคมีและสารกำจัดตัวยุงลายแก่</h2>
+                            <h2 class="text-lg font-bold text-slate-900">บันทึกประวัติการฉีดพ่นเคและสารกำจัดตัวยุงลายแก่</h2>
                             <p class="text-xs text-slate-500">บันทึกการส่งหน่วยงานตอบโต้ภัยเร่งด่วนเพื่อพ่นละอองเคมีรอบบ้านผู้ป่วยไข้เลือดออก</p>
                         </div>
                         <div class="flex space-x-2 w-full sm:w-auto">
@@ -582,8 +582,8 @@
                         <input type="text" id="p-cid" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="13 หลัก">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">เลขทะเบียนคนไข้ (HN)</label>
-                        <input type="text" id="p-hn" required class="w-full px-3 py-2 border rounded-lg text-xs">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">เลขทะเบียนคนไข้ (HN) - รันอัตโนมัติ</label>
+                        <input type="text" id="p-hn" readonly required class="w-full px-3 py-2 border rounded-lg text-xs bg-slate-100 text-slate-500 font-mono cursor-not-allowed">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -653,7 +653,7 @@
     <!-- Modal: Survey Form -->
     <div id="modal-survey" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
-            <h3 class="text-lg font-bold text-slate-900 mb-4 border-b pb-2" id="modal-survey-title">บันทึกผลการสำรวจลูกน้ำยุงลายรายบ้าน</h3>
+            <h3 class="text-lg font-bold text-slate-900 mb-4 border-b pb-2">บันทึกผลการสำรวจลูกน้ำยุงลายรายบ้าน</h3>
             <form id="form-survey" onsubmit="saveSurvey(event)" class="space-y-4">
                 <input type="hidden" id="s-index">
                 <div class="grid grid-cols-2 gap-4">
@@ -764,6 +764,24 @@
         let mapCircles = [];
         let monthlyChart = null;
         let indexChart = null;
+
+        // --- Utility Functions สำหรับ PDPA และ Auto HN ---
+        function isPDPA() {
+            return currentRole === 'OSM' || currentRole === 'VIEWER';
+        }
+
+        function generateNextHN() {
+            if (!patients || patients.length === 0) return 'HN001';
+            let maxNum = 0;
+            patients.forEach(p => {
+                if (p.hn && p.hn.toUpperCase().startsWith('HN')) {
+                    let num = parseInt(p.hn.substring(2), 10);
+                    if (!isNaN(num) && num > maxNum) maxNum = num;
+                }
+            });
+            return 'HN' + String(maxNum + 1).padStart(3, '0');
+        }
+        // ------------------------------------------------
 
         window.onload = function() {
             document.getElementById('user-role-selector').value = currentRole;
@@ -909,6 +927,7 @@
             });
         }
 
+        // ดึงข้อมูลหลักพร้อมการกู้คืนหากล้มเหลว (Offline Fail-safe)
         async function fetchDashboardData() {
             if (!apiEndpoint) return;
             
@@ -1019,11 +1038,16 @@
                     ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full"><i class="fa-solid fa-circle-check"></i> ดำเนินการแล้ว</span>`
                     : `<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-full animate-pulse"><i class="fa-solid fa-circle-info"></i> รอดำเนินการ</span>`;
 
+                // PDPA Data Masking
+                const dName = isPDPA() ? `ผู้ป่วย${p.gender} (อายุ ${p.age} ปี)` : p.name;
+                const dHn = isPDPA() ? `HN***` : p.hn;
+                const dCid = isPDPA() ? `***` : p.cid;
+
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-slate-700">${p.date_onset}</td>
                     <td class="p-3">
-                        <div class="font-bold text-slate-800">${p.name}</div>
-                        <div class="text-[10px] text-slate-400">HN: ${p.hn} | CID: ${p.cid}</div>
+                        <div class="font-bold text-slate-800">${dName}</div>
+                        <div class="text-[10px] text-slate-400">HN: ${dHn} | CID: ${dCid}</div>
                     </td>
                     <td class="p-3 text-slate-600">หมู่ที่ ${p.village}</td>
                     <td class="p-3 font-mono text-xs text-slate-500">${parseFloat(p.lat || 0).toFixed(4)}, ${parseFloat(p.lng || 0).toFixed(4)}</td>
@@ -1211,13 +1235,18 @@
                     })
                 });
 
+                // PDPA Data Masking สำหรับแผนที่
+                const dName = isPDPA() ? `ผู้ป่วย${p.gender} (อายุ ${p.age} ปี)` : p.name;
+                const dHn = isPDPA() ? `HN***` : p.hn;
+                const dAddress = isPDPA() ? `หมู่ที่ ${p.village}` : `บ้านเลขที่ ${p.address} หมู่ที่ ${p.village}`;
+
                 const popupHtml = `
                     <div class="p-1 font-sarabun text-slate-800">
                         <strong class="text-rose-600 block text-sm"><i class="fa-solid fa-hospital-user mr-1"></i>ข้อมูลผู้ป่วยไข้เลือดออก</strong>
                         <div class="mt-1.5 space-y-1 text-xs">
-                            <p><strong>ชื่อ-นามสกุล:</strong> ${p.name}</p>
-                            <p><strong>HN:</strong> ${p.hn} | <strong>อายุ:</strong> ${p.age} ปี</p>
-                            <p><strong>ที่อยู่:</strong> บ้านเลขที่ ${p.address} หมู่ที่ ${p.village}</p>
+                            <p><strong>ข้อมูลคนไข้:</strong> ${dName}</p>
+                            <p><strong>HN:</strong> ${dHn} | <strong>อายุ:</strong> ${p.age} ปี</p>
+                            <p><strong>ที่อยู่:</strong> ${dAddress}</p>
                             <p><strong>วันที่เริ่มป่วย:</strong> ${p.date_onset}</p>
                             <p><strong>ผลแล็บยืนยัน:</strong> <span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold text-[10px]">${p.result}</span></p>
                         </div>
@@ -1227,7 +1256,11 @@
                 patientMarker.bindPopup(popupHtml);
                 patientMarker.addTo(mapInstance);
                 patientMarker.dataType = "patient";
-                patientMarker.searchText = `${p.name} ${p.address} ${p.hn}`;
+                // ใช้ข้อมูลจริงในการค้นหา เพื่อให้ระบบเจาะจงเป้าหมายได้ (โดยไม่พังเมื่อค่าเป็น undefined)
+                patientMarker.searchText = `${p.name || ''} ${p.address || ''} ${p.hn || ''}`;
+                
+                // แนบรหัสผู้ป่วย (HN) เข้าไปกับ Marker เพื่อใช้ควบคุมการกรอง Circles
+                patientMarker.hnVal = p.hn;
                 mapMarkers.push(patientMarker);
 
                 const circle50 = L.circle([lat, lng], { radius: 50, color: '#f87171', fillColor: '#f87171', fillOpacity: 0.12 }).addTo(mapInstance);
@@ -1239,6 +1272,12 @@
                 circle100.radiusVal = 100;
                 circle150.radiusVal = 150;
                 circle200.radiusVal = 200;
+
+                // แนบ HN เข้ากับ Circles แต่ละวง เพื่อใช้อ้างอิงการ ซ่อน/แสดง พร้อมๆ กับตัว Marker ผู้ป่วย
+                circle50.hnVal = p.hn;
+                circle100.hnVal = p.hn;
+                circle150.hnVal = p.hn;
+                circle200.hnVal = p.hn;
 
                 mapCircles.push(circle50, circle100, circle150, circle200);
             });
@@ -1278,7 +1317,7 @@
                 surveyMarker.bindPopup(popupHtml);
                 surveyMarker.addTo(mapInstance);
                 surveyMarker.dataType = hasMosquito ? "survey-positive" : "house";
-                surveyMarker.searchText = `${s.owner} ${s.address}`;
+                surveyMarker.searchText = `${s.owner || ''} ${s.address || ''}`;
                 mapMarkers.push(surveyMarker);
             });
         }
@@ -1289,15 +1328,25 @@
             const show150 = document.getElementById('chk-radius-150').checked;
             const show200 = document.getElementById('chk-radius-200').checked;
 
+            // ตรวจสอบการเปิด-ปิด รัศมีเฉพาะผู้ป่วยที่ถูกแสดงผลอยู่ในแผนที่ ณ ขณะนั้นเท่านั้น
             mapCircles.forEach(circle => {
-                if(circle.radiusVal === 50) {
-                    show50 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
-                } else if(circle.radiusVal === 100) {
-                    show100 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
-                } else if(circle.radiusVal === 150) {
-                    show150 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
-                } else if(circle.radiusVal === 200) {
-                    show200 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                // ค้นหาว่า Marker ผู้ป่วยที่ผูกกับ Circle วงนี้ กำลังแสดงอยู่บนแผนที่หรือไม่
+                const associatedPatientMarker = mapMarkers.find(m => m.dataType === 'patient' && m.hnVal === circle.hnVal);
+                const isPatientVisible = associatedPatientMarker && mapInstance.hasLayer(associatedPatientMarker);
+
+                if (isPatientVisible) {
+                    if(circle.radiusVal === 50) {
+                        show50 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                    } else if(circle.radiusVal === 100) {
+                        show100 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                    } else if(circle.radiusVal === 150) {
+                        show150 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                    } else if(circle.radiusVal === 200) {
+                        show200 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
+                    }
+                } else {
+                    // หากผู้ป่วยถูกซ่อนอยู่ ก็ต้องซ่อนวงกลมรัศมีของวงนั้นๆ ด้วย
+                    mapInstance.removeLayer(circle);
                 }
             });
         }
@@ -1308,6 +1357,9 @@
             const showHouse = document.getElementById('chk-marker-house').checked;
             const showPositive = document.getElementById('chk-marker-survey-positive').checked;
 
+            let bounds = L.latLngBounds();
+            let hasVisibleMarkers = false;
+
             mapMarkers.forEach(marker => {
                 let matchesType = false;
                 if(marker.dataType === "patient" && showPatient) matchesType = true;
@@ -1316,15 +1368,25 @@
 
                 let matchesSearch = true;
                 if(query) {
-                    matchesSearch = marker.searchText.toLowerCase().includes(query);
+                    matchesSearch = (marker.searchText || "").toLowerCase().includes(query);
                 }
 
                 if(matchesType && matchesSearch) {
                     marker.addTo(mapInstance);
+                    bounds.extend(marker.getLatLng());
+                    hasVisibleMarkers = true;
                 } else {
                     mapInstance.removeLayer(marker);
                 }
             });
+
+            // ปรับปรุงการ ซ่อน/แสดง รัศมีควบคุมโรค (Circles) ให้สัมพันธ์กับตัวผู้ป่วยที่ถูกค้นหา
+            toggleRadiusCircles();
+
+            // จัดการซูมแผนที่ให้อยู่ในขอบเขตของหมุดที่ค้นหาเจอ (โดยไม่ขโมย Focus จากช่องพิมพ์)
+            if (query && hasVisibleMarkers) {
+                mapInstance.fitBounds(bounds, { maxZoom: 17, animate: true });
+            }
         }
 
         function zoomToCurrentLocation() {
@@ -1339,7 +1401,7 @@
                             icon: L.divIcon({
                                 className: 'current-pos-marker',
                                 html: `<div class="w-4 h-4 bg-blue-500 border-2 border-white rounded-full animate-ping"></div>`,
-                                iconSize: [16, 16]
+                                Size: [16, 16]
                             })
                         }).addTo(mapInstance).bindPopup("<b>คุณอยู่ที่นี่</b>").openPopup();
                     }
@@ -1391,11 +1453,17 @@
                     ? `<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded font-bold"><i class="fa-solid fa-circle-check"></i> พ่นเคมีแล้ว</span>`
                     : `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded font-bold animate-pulse">รอพ่นเคมี</span>`;
 
+                // PDPA Data Masking ในตารางหลัก
+                const dName = isPDPA() ? `ผู้ป่วย${p.gender} (อายุ ${p.age} ปี)` : p.name;
+                const dHn = isPDPA() ? `HN***` : p.hn;
+                const dCid = isPDPA() ? `***` : p.cid;
+                const dAddress = isPDPA() ? `หมู่ที่ ${p.village}` : `บ้านเลขที่ ${p.address} หมู่ที่ ${p.village}`;
+
                 tr.innerHTML = `
-                    <td class="p-3 font-semibold text-slate-700">${p.hn}<br><span class="text-xs text-slate-400">${p.cid}</span></td>
-                    <td class="p-3 font-bold text-slate-800">${p.name}</td>
+                    <td class="p-3 font-semibold text-slate-700">${dHn}<br><span class="text-xs text-slate-400">${dCid}</span></td>
+                    <td class="p-3 font-bold text-slate-800">${dName}</td>
                     <td class="p-3">${p.age} ปี / ${p.gender}</td>
-                    <td class="p-3">บ้านเลขที่ ${p.address} หมู่ที่ ${p.village}</td>
+                    <td class="p-3">${dAddress}</td>
                     <td class="p-3 font-mono text-xs">${p.date_onset}</td>
                     <td class="p-3"><span class="bg-red-50 text-red-700 text-xs font-bold px-2 py-1 rounded border border-red-100">${p.result}</span></td>
                     <td class="p-3">${statusBadge}</td>
@@ -1418,6 +1486,7 @@
         function openPatientModal() {
             document.getElementById('form-patient').reset();
             document.getElementById('p-index').value = "";
+            document.getElementById('p-hn').value = generateNextHN(); // รัน HN ลำดับถัดไปให้อัตโนมัติ
             document.getElementById('modal-patient-title').innerText = "บันทึกรายชื่อผู้ป่วยไข้เลือดออกใหม่";
             document.getElementById('modal-patient').classList.remove('hidden');
         }
@@ -1571,7 +1640,7 @@
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
-                        <span style="display: ${allowWrite ? 'none' : 'inline'}" class="text-xs text-slate-400 font-mono">-</span>
+                        <span style="display: ${allowWrite ? 'none' : 'inline'}" class="text-xs text-slate-400">-</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1581,7 +1650,6 @@
         function openSurveyModal() {
             document.getElementById('form-survey').reset();
             document.getElementById('s-index').value = "";
-            document.getElementById('modal-survey-title').innerText = "บันทึกผลการสำรวจลูกน้ำยุงลายรายบ้าน";
             document.getElementById('modal-survey').classList.remove('hidden');
         }
 
@@ -1601,7 +1669,6 @@
             document.getElementById('s-lng').value = s.lng;
             document.getElementById('s-surveyor').value = s.surveyor;
 
-            document.getElementById('modal-survey-title').innerText = "แก้ไขข้อมูลผลการสำรวจลูกน้ำยุงลาย";
             document.getElementById('modal-survey').classList.remove('hidden');
         }
 
@@ -1633,23 +1700,23 @@
 
                 if(res.status === 'success') {
                     closeSurveyModal();
-                    Swal.fire('สำเร็จ', 'บันทึกข้อมูลปรับปรุงลง Google Sheet เรียบร้อยแล้ว', 'success');
+                    Swal.fire('สำเร็จ', 'บันทึกเรียบร้อยลงคลาวด์สเปรดชีตแล้ว', 'success');
                     fetchDashboardData();
                 } else {
                     Swal.fire('เกิดข้อผิดพลาด', res.message, 'error');
                 }
             } catch(e) {
-                // จัดการออฟไลน์หากเครือข่ายมีปัญหา
-                if(index === "") {
+                // อัปเดตแบบ Offline
+                if (index === "") {
                     surveys.push({ ...payload, timestamp: new Date().toLocaleString('th-TH') });
                 } else {
-                    surveys[index] = { ...payload, timestamp: surveys[index].timestamp + " (แก้ไขออฟไลน์)" };
+                    surveys[index] = { ...payload, timestamp: new Date().toLocaleString('th-TH') };
                 }
                 localStorage.setItem('cached_surveys', JSON.stringify(surveys));
                 closeSurveyModal();
                 updateKpis();
                 renderSurveyTable();
-                Swal.fire('จัดเก็บข้อมูลแบบออฟไลน์สำเร็จ', 'ระบบบันทึกในอุปกรณ์ชั่วคราวแล้ว และจะซิงค์เมื่อสัญญาณกลับมาปกติ', 'info');
+                Swal.fire('จัดเก็บข้อมูลแบบออฟไลน์สำเร็จ', 'ระบบได้บันทึกสำรองข้อมูลชั่วคราวในอุปกรณ์แล้ว', 'info');
             }
         }
 
