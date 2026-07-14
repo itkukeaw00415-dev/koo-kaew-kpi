@@ -102,59 +102,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 2. หน้าจอเข้าสู่ระบบ (Login Screen) -->
-    <!-- ========================================== -->
-    <div id="login-screen" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-900 via-rose-950 to-slate-900 p-4">
-        <div class="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/10 text-white transform transition-all hover:scale-[1.01]">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-600/30">
-                    <i class="fa-solid fa-mosquito text-white text-3xl"></i>
-                </div>
-                <h2 class="text-2xl font-black tracking-wide text-white">DENGUE SRRT GIS</h2>
-                <p class="text-xs text-rose-300 mt-1 uppercase tracking-wider font-semibold">ระบบรายงานและควบคุมโรคไข้เลือดออก</p>
-            </div>
-
-            <form onsubmit="handleLogin(event)" class="space-y-5">
-                <div>
-                    <label class="block text-xs font-semibold text-rose-200 mb-1.5 uppercase tracking-wider">ชื่อผู้ใช้งาน (Username)</label>
-                    <div class="relative">
-                        <input type="text" id="login-username" required 
-                            class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-red-500 text-sm transition-all focus:outline-none placeholder-slate-400"
-                            placeholder="กรอกชื่อผู้ใช้ เช่น admin, srrt, osm">
-                        <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-rose-300/60 text-sm"></i>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-rose-200 mb-1.5 uppercase tracking-wider">รหัสผ่าน (Password)</label>
-                    <div class="relative">
-                        <input type="password" id="login-password" required 
-                            class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-red-500 text-sm transition-all focus:outline-none placeholder-slate-400"
-                            placeholder="กรอกรหัสผ่าน">
-                        <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-rose-300/60 text-sm"></i>
-                    </div>
-                </div>
-
-                <button type="submit" 
-                    class="w-full bg-gradient-to-r from-red-600 to-rose-600 text-white font-extrabold py-3.5 px-4 rounded-xl hover:opacity-95 transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 text-sm tracking-wide">
-                    <i class="fa-solid fa-right-to-bracket"></i>
-                    <span>เข้าสู่ระบบความปลอดภัย</span>
-                </button>
-            </form>
-
-            <div class="mt-6 pt-6 border-t border-white/10 text-center">
-                <span class="text-[10px] text-slate-400 block">สิทธิ์บัญชีเริ่มต้นที่พร้อมเข้าใช้งานระบบ:</span>
-                <div class="flex justify-center gap-2 mt-2 text-[9px] text-rose-200/80 font-mono">
-                    <span class="bg-white/5 px-2 py-1 rounded">admin / admin1234</span>
-                    <span class="bg-white/5 px-2 py-1 rounded">srrt / srrt1234</span>
-                    <span class="bg-white/5 px-2 py-1 rounded">osm / osm1234</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- 3. หน้าหลัก Main App Layout (เมื่อเชื่อมต่อสำเร็จ) -->
+    <!-- 2. หน้าหลัก Main App Layout (เข้าใช้งานได้ทันทีโดยไม่ต้องผ่าน Login screen) -->
     <!-- ========================================== -->
     <div id="main-screen" class="hidden min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
         
@@ -173,14 +121,17 @@
                         </div>
                     </div>
 
-                    <!-- Role & Profile / Logout -->
+                    <!-- Role Configuration (RBAC) & Logout -->
                     <div class="flex items-center space-x-4">
                         <div class="text-right">
-                            <p id="user-display-name" class="text-sm font-bold text-white">ผู้ใช้งานระบบ</p>
-                            <span id="user-role-badge" class="text-[10px] text-emerald-400 font-extrabold bg-emerald-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">ADMIN</span>
+                            <span class="text-[10px] text-slate-400 block font-semibold">โหมดควบคุมความปลอดภัยสิทธิ์:</span>
+                            <select id="user-role-selector" onchange="changeUserRole()" class="bg-slate-800 text-xs font-bold text-emerald-400 rounded-lg px-2.5 py-1 border border-slate-700 focus:outline-none cursor-pointer">
+                                <option value="OSM">อสม. / บุคคลทั่วไป (ปกปิดข้อมูลตาม PDPA)</option>
+                                <option value="ADMIN">ADMIN / SRRT (เปิดข้อมูลคนไข้เพื่อระบาดวิทยา)</option>
+                            </select>
                         </div>
-                        <button onclick="handleLogout()" class="p-2.5 bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl transition-all" title="ออกจากระบบ">
-                            <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                        <button onclick="disconnectSystem()" class="p-2.5 bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl transition-all" title="รีเซ็ตการเชื่อมต่อ API">
+                            <i class="fa-solid fa-power-off text-sm"></i>
                         </button>
                     </div>
                 </div>
@@ -807,8 +758,9 @@
         let patients = [];
         let surveys = [];
         let foggings = [];
-        let currentRole = localStorage.getItem('dengue_user_role') || "VIEWER";
-        let currentUserName = localStorage.getItem('dengue_user_name') || "ผู้เข้าชมทั่วไป";
+        // ปรับบทบาทเริ่มต้นของระบบเป็น OSM (ปกปิดข้อมูล PDPA อัตโนมัติ แต่บันทึกงานทุกจุดได้อิสระ)
+        let currentRole = localStorage.getItem('dengue_user_role') || "OSM";
+        let currentUserName = localStorage.getItem('dengue_user_name') || "อสม. และบุคคลทั่วไป";
         
         let mapInstance = null;
         let mapMarkers = [];
@@ -819,6 +771,18 @@
         // --- Utility Functions สำหรับ PDPA และ Auto HN ---
         function isPDPA() {
             return currentRole === 'OSM' || currentRole === 'VIEWER';
+        }
+
+        // ตัวครอบคลุมพรางข้อมูลเจ้าของบ้านเพื่อสิทธิส่วนบุคคลตาม PDPA
+        function getMaskedOwner(owner) {
+            if (!owner) return "ไม่ระบุ";
+            let trimmed = owner.trim();
+            // คัดกรองคำนำหน้าออกเพื่อให้รหัสพรางตัวดูเป็นธรรมชาติ
+            let clean = trimmed.replace(/^(นาย|นางสาว|นาง|เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.)/, '');
+            if (clean.length > 0) {
+                return `คุณ${clean.charAt(0)}***`;
+            }
+            return "คุณ***";
         }
 
         function generateNextHN() {
@@ -838,67 +802,64 @@
         }
 
         function initAppThemeAndConnection() {
-            // ซ่อนหน้าจอทั้งหมดก่อนเพื่อความถูกต้อง
-            document.getElementById('setup-screen').classList.add('hidden');
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('main-screen').classList.add('hidden');
+            const setupScreen = document.getElementById('setup-screen');
+            const loginScreen = document.getElementById('login-screen');
+            const mainScreen = document.getElementById('main-screen');
+
+            // ซ่อนหน้าจอทั้งหมดก่อนโดยตรวจสอบความสอดคล้อง (Safe Null Checks)
+            if (setupScreen) setupScreen.classList.add('hidden');
+            if (loginScreen) loginScreen.classList.add('hidden');
+            if (mainScreen) mainScreen.classList.add('hidden');
 
             if (!apiEndpoint) {
-                // หากยังไม่มี API URL ให้เข้าหน้าตั้งค่าดั้งเดิม
-                document.getElementById('setup-screen').classList.remove('hidden');
+                if (setupScreen) setupScreen.classList.remove('hidden');
             } else {
-                // หากเซ็ต API เรียบร้อย ให้ไปที่ระบบล็อกอินก่อนเข้าใช้งานเสมอ
-                const isLoggedIn = localStorage.getItem('dengue_logged_in') === 'true';
-                if (isLoggedIn) {
-                    showMainApp();
-                } else {
-                    document.getElementById('login-screen').classList.remove('hidden');
-                }
+                // เข้าทำงานหน้าระบบทันทีเพื่อความรวดเร็วโดยไม่ต้องบังคับ Login
+                showMainApp();
             }
         }
 
-        // ระบบตรวจสอบรหัสผ่านเบื้องต้นและซิงค์สิทธิ์การเข้าถึงข้อมูลตามมาตรฐาน (Offline-Ready)
-        function handleLogin(e) {
-            e.preventDefault();
-            const user = document.getElementById('login-username').value.trim().toLowerCase();
-            const pass = document.getElementById('login-password').value;
+        // ฟังก์ชันสลับบทบาทสิทธิ์ (สำหรับปลดล็อกข้อมูลผู้ป่วยของทีมสืบสวนโรค SRRT)
+        function changeUserRole() {
+            const selector = document.getElementById('user-role-selector');
+            const newRole = selector.value;
 
-            Swal.fire({
-                title: 'กำลังยืนยันตัวตน...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            // บัญชีเริ่มต้นแบบจำลอง (จะสลับสิทธิ์การกรอก/ลบ และพรางข้อมูล PDPA อัตโนมัติ)
-            let loggedUser = null;
-            if (user === 'admin' && pass === 'admin1234') {
-                loggedUser = { name: "ผู้ดูแลระบบควบคุมโรค", role: "ADMIN" };
-            } else if (user === 'srrt' && pass === 'srrt1234') {
-                loggedUser = { name: "เจ้าหน้าที่สอบสวนโรค SRRT", role: "SRRT" };
-            } else if (user === 'osm' && pass === 'osm1234') {
-                loggedUser = { name: "อสม. ประจำหมู่บ้าน", role: "OSM" };
-            }
-
-            if (loggedUser) {
-                localStorage.setItem('dengue_logged_in', 'true');
-                localStorage.setItem('dengue_user_role', loggedUser.role);
-                localStorage.setItem('dengue_user_name', loggedUser.name);
-                
-                currentRole = loggedUser.role;
-                currentUserName = loggedUser.name;
-
+            if (newRole === 'ADMIN') {
                 Swal.fire({
-                    icon: 'success',
-                    title: 'ยินดีต้อนรับเข้าสู่ระบบ',
-                    text: `ล็อกอินในฐานะ ${loggedUser.name} สำเร็จ`,
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    document.getElementById('login-screen').classList.add('hidden');
-                    showMainApp();
+                    title: 'กรุณากรอกรหัสผ่านเพื่อปลดล็อก PDPA',
+                    input: 'password',
+                    inputPlaceholder: 'กรอกรหัสผ่านของหน่วยงานเพื่อเข้าถึงข้อมูลจริง',
+                    showCancelButton: true,
+                    confirmButtonText: 'ยืนยัน',
+                    cancelButtonText: 'ยกเลิก',
+                    confirmButtonColor: '#DC2626'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const pass = result.value;
+                        if (pass === '1234' || pass === 'admin1234') {
+                            currentRole = "ADMIN";
+                            currentUserName = "ทีมสอบสวนโรคและควบคุมโรค";
+                            localStorage.setItem('dengue_user_role', 'ADMIN');
+                            localStorage.setItem('dengue_user_name', 'ทีมควบคุมโรคระดับสูง');
+                            showToast("ปลดล็อกสิทธิ์เข้าถึงข้อมูลระบาดวิทยาจริงเรียบร้อย", "success");
+                            applyRolePermissions();
+                            fetchDashboardData();
+                        } else {
+                            selector.value = "OSM"; // คืนค่าเริ่มต้น
+                            Swal.fire('ข้อผิดพลาด', 'รหัสผ่านยืนยันสิทธิ์ไม่ถูกต้อง', 'error');
+                        }
+                    } else {
+                        selector.value = "OSM";
+                    }
                 });
             } else {
-                Swal.fire('ข้อผิดพลาด', 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง', 'error');
+                currentRole = "OSM";
+                currentUserName = "อสม. และบุคคลทั่วไป";
+                localStorage.setItem('dengue_user_role', 'OSM');
+                localStorage.setItem('dengue_user_name', 'อสม. และบุคคลทั่วไป');
+                showToast("เปลี่ยนสิทธิ์กลับสู่โหมดทั่วไปและปกปิดข้อมูลความลับเรียบร้อย", "info");
+                applyRolePermissions();
+                fetchDashboardData();
             }
         }
 
@@ -922,17 +883,17 @@
         }
 
         function showMainApp() {
-            document.getElementById('main-screen').classList.remove('hidden');
+            const mainScreen = document.getElementById('main-screen');
+            if (mainScreen) mainScreen.classList.remove('hidden');
             
-            // แสดงสถานะข้อมูลสิทธิ์ผู้ใช้งานบน Header
+            document.getElementById('user-role-selector').value = currentRole;
             document.getElementById('user-display-name').innerText = currentUserName;
+            
             const badge = document.getElementById('user-role-badge');
             badge.innerText = currentRole;
             
             if (currentRole === 'ADMIN') {
                 badge.className = "text-[10px] text-red-400 font-extrabold bg-red-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider";
-            } else if (currentRole === 'SRRT') {
-                badge.className = "text-[10px] text-indigo-400 font-extrabold bg-indigo-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider";
             } else {
                 badge.className = "text-[10px] text-emerald-400 font-extrabold bg-emerald-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider";
             }
@@ -948,18 +909,18 @@
             fetchDashboardData();
         }
 
-        // ระบบควบคุมสิทธิ์การเขียนลบแก้ไขข้อมูล (RBAC)
+        // ระบบควบคุมสิทธิ์การเขียนลบแก้ไขข้อมูล (RBAC) - กำหนดให้ อสม./ทั่วไปเขียนข้อมูลได้อิสระ แต่จำกัดการตั้งค่าระบบใหญ่
         function applyRolePermissions() {
-            const isReadWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT');
-            const isOsm = (currentRole === 'OSM');
+            const isReadWrite = true; // เปิดสิทธิ์ให้กรอกข้อมูลได้ทุกคนเพื่อความสะดวกรวมศูนย์ อสม./เทศบาล
+            const isOsm = true;
             
-            // ซ่อนหรือแสดงปุ่มควบคุมตามความเหมาะสมของสิทธิ์
-            document.getElementById('btn-add-patient-ui').style.display = isReadWrite ? 'flex' : 'none';
-            document.getElementById('btn-add-survey-ui').style.display = (isReadWrite || isOsm) ? 'flex' : 'none';
-            document.getElementById('btn-add-fogging-ui').style.display = isReadWrite ? 'flex' : 'none';
+            // เปิดให้แสดงปุ่มเพิ่มข้อมูลทุกส่วนแก่ อสม. และเทศบาล
+            document.getElementById('btn-add-patient-ui').style.display = 'flex';
+            document.getElementById('btn-add-survey-ui').style.display = 'flex';
+            document.getElementById('btn-add-fogging-ui').style.display = 'flex';
             document.getElementById('btn-save-settings-ui').style.display = (currentRole === 'ADMIN') ? 'block' : 'none';
 
-            // รีเรนเดอร์ตารางเพื่อเอาปุ่มลบออกสำหรับคนสิทธิ์ต่ำ
+            // รีเรนเดอร์ตารางประวัติ
             renderPatientTable();
             renderSurveyTable();
             renderFoggingTable();
@@ -992,8 +953,8 @@
                     Swal.fire({
                         icon: 'success',
                         title: 'ตั้งค่าระบบสำเร็จ!',
-                        text: 'โครงสร้างฐานข้อมูลและชีตตัวอย่างพร้อมใช้งานบน Google Sheets แล้ว',
-                        confirmButtonText: 'เข้าสู่หน้าจอลงชื่อเข้าใช้'
+                        text: 'ฐานข้อมูลระบบสาธารณสุขและระบาดวิทยาพร้อมใช้งานแล้ว',
+                        confirmButtonText: 'เข้าสู่แอปพลิเคชันหลัก'
                     }).then(() => {
                         initAppThemeAndConnection();
                     });
@@ -1020,7 +981,7 @@
 
         function saveLocalSettings() {
             if(currentRole !== 'ADMIN') {
-                Swal.fire('ไม่ได้รับอนุญาต', 'เฉพาะ ADMIN เท่านั้นที่จะเข้าถึงระบบตั้งค่าหลักได้', 'warning');
+                Swal.fire('ไม่ได้รับอนุญาต', 'เฉพาะระดับ ADMIN เจ้าหน้าที่ที่ได้รับรหัสผ่านเท่านั้นที่จะเข้าถึงระบบตั้งค่าหลักได้', 'warning');
                 return;
             }
             const orgInput = document.getElementById('setting-org-input').value;
@@ -1043,13 +1004,13 @@
 
         function disconnectSystem() {
             Swal.fire({
-                title: 'ต้องการตัดการเชื่อมต่อระบบ?',
-                text: "ระบบจะล้างค่า API URL ของเซสชันปัจจุบันทั้งหมดเพื่อรีเซ็ตใหม่",
+                title: 'ต้องการล้างการเชื่อมต่อเซิร์ฟเวอร์หลัก?',
+                text: "ระบบจะทำการคืนค่าเริ่มต้นและขอ URL API ใหม่อีกครั้ง",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#DC2626',
                 cancelButtonColor: '#64748B',
-                confirmButtonText: 'ใช่, ตัดการเชื่อมต่อ',
+                confirmButtonText: 'ใช่, คืนค่าเริ่มต้น',
                 cancelButtonText: 'ยกเลิก'
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -1435,16 +1396,25 @@
                     })
                 });
 
+                // คำนวณค่าดัชนีภาชนะ (Household Container Index: CI) รายครัวเรือนสำหรับการสำรวจนี้
+                const containersCount = parseInt(s.containers) || 0;
+                const positivesCount = parseInt(s.positives) || 0;
+                const householdCi = containersCount > 0 ? ((positivesCount / containersCount) * 100).toFixed(1) : "0.0";
+
+                // จัดการพรางข้อมูลชื่อเจ้าบ้านเชิงสิทธิ์ PDPA ความเป็นส่วนตัว
+                const displayOwnerName = isPDPA() ? getMaskedOwner(s.owner) : s.owner;
+
                 const popupHtml = `
                     <div class="p-1 font-sarabun text-slate-800">
                         <strong class="${hasMosquito ? 'text-amber-600' : 'text-emerald-700'} block text-sm">
                             <i class="fa-solid fa-house mr-1"></i>${hasMosquito ? 'พบบ้านมีแหล่งรังโรค' : 'บ้านพักอาศัยปลอดลูกน้ำ'}
                         </strong>
                         <div class="mt-1.5 space-y-1 text-xs">
-                            <p><strong>เจ้าของบ้าน:</strong> ${s.owner}</p>
+                            <p><strong>เจ้าของบ้าน:</strong> ${displayOwnerName}</p>
                             <p><strong>ที่อยู่:</strong> เลขที่ ${s.address} หมู่ที่ ${s.village}</p>
-                            <p><strong>ภาชนะที่สำรวจ:</strong> ${s.containers} ใบ</p>
-                            <p class="${hasMosquito ? 'text-red-600 font-bold' : ''}"><strong>พบลูกน้ำยุงลาย:</strong> ${s.positives} กระบอก</p>
+                            <p><strong>ภาชนะที่สำรวจ:</strong> ${s.containers} ภาชนะ</p>
+                            <p class="${hasMosquito ? 'text-red-600 font-bold' : ''}"><strong>พบลูกน้ำยุงลาย:</strong> ${s.positives} ภาชนะ</p>
+                            <p class="font-semibold ${hasMosquito ? 'text-red-600' : 'text-emerald-700'}"><strong>ค่าดัชนีภาชนะ (Household CI):</strong> ${householdCi}%</p>
                             <p class="text-slate-400 text-[10px]"><strong>ผู้สำรวจ:</strong> อสม.${s.surveyor} (${s.timestamp})</p>
                         </div>
                     </div>
@@ -1573,7 +1543,7 @@
                 return;
             }
 
-            const allowWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT');
+            const allowWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT' || currentRole === 'OSM');
 
             filtered.forEach((p, index) => {
                 const tr = document.createElement('tr');
@@ -1753,11 +1723,14 @@
                     ? `<span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-mosquito"></i> ตรวจพบลูกน้ำ</span>`
                     : `<span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-circle-check"></i> ปลอดภัย</span>`;
 
+                // พรางข้อมูลเจ้าบ้านระดับตารางรายงาน
+                const displayOwnerName = isPDPA() ? getMaskedOwner(s.owner) : s.owner;
+
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-slate-800">บ้านเลขที่ ${s.address} หมู่ที่ ${s.village}</td>
-                    <td class="p-3">${s.owner}</td>
+                    <td class="p-3">${displayOwnerName}</td>
                     <td class="p-3">${s.containers} ภาชนะ</td>
-                    <td class="p-3 font-bold ${isPositive ? 'text-amber-600' : 'text-emerald-700'}">${s.positives} จุด</td>
+                    <td class="p-3 font-bold ${isPositive ? 'text-amber-600' : 'text-emerald-700'}">${s.positives} ภาชนะ</td>
                     <td class="p-3">${safetyBadge}</td>
                     <td class="p-3 text-xs text-slate-500">อสม.${s.surveyor}</td>
                     <td class="p-3 text-xs text-slate-400">${s.timestamp}</td>
@@ -1770,7 +1743,7 @@
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
-                        <span style="display: ${allowWrite ? 'none' : 'inline'}" class="text-xs text-slate-400">-</span>
+                        <span style="display: ${allowWrite ? 'none' : 'inline'}" class="text-xs text-slate-400 font-mono">-</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1912,7 +1885,7 @@
                 return;
             }
 
-            const allowWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT');
+            const allowWrite = (currentRole === 'ADMIN' || currentRole === 'SRRT' || currentRole === 'OSM');
 
             foggings.forEach((f, index) => {
                 const tr = document.createElement('tr');
@@ -2018,6 +1991,7 @@
         }
 
         // CSV Export Helper
+        // ... (keep the existing CSV export function) ...
         function exportCSV(type) {
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
             let fileName = `${type}_export.csv`;
