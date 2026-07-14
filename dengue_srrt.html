@@ -102,7 +102,59 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 2. หน้าหลัก Main App Layout (เมื่อเชื่อมต่อสำเร็จ) -->
+    <!-- 2. หน้าจอเข้าสู่ระบบ (Login Screen) -->
+    <!-- ========================================== -->
+    <div id="login-screen" class="hidden min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-900 via-rose-950 to-slate-900 p-4">
+        <div class="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/10 text-white transform transition-all hover:scale-[1.01]">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-600/30">
+                    <i class="fa-solid fa-mosquito text-white text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-black tracking-wide text-white">DENGUE SRRT GIS</h2>
+                <p class="text-xs text-rose-300 mt-1 uppercase tracking-wider font-semibold">ระบบรายงานและควบคุมโรคไข้เลือดออก</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold text-rose-200 mb-1.5 uppercase tracking-wider">ชื่อผู้ใช้งาน (Username)</label>
+                    <div class="relative">
+                        <input type="text" id="login-username" required 
+                            class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-red-500 text-sm transition-all focus:outline-none placeholder-slate-400"
+                            placeholder="กรอกชื่อผู้ใช้ เช่น admin, srrt, osm">
+                        <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-rose-300/60 text-sm"></i>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-rose-200 mb-1.5 uppercase tracking-wider">รหัสผ่าน (Password)</label>
+                    <div class="relative">
+                        <input type="password" id="login-password" required 
+                            class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-red-500 text-sm transition-all focus:outline-none placeholder-slate-400"
+                            placeholder="กรอกรหัสผ่าน">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-rose-300/60 text-sm"></i>
+                    </div>
+                </div>
+
+                <button type="submit" 
+                    class="w-full bg-gradient-to-r from-red-600 to-rose-600 text-white font-extrabold py-3.5 px-4 rounded-xl hover:opacity-95 transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 text-sm tracking-wide">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>เข้าสู่ระบบความปลอดภัย</span>
+                </button>
+            </form>
+
+            <div class="mt-6 pt-6 border-t border-white/10 text-center">
+                <span class="text-[10px] text-slate-400 block">สิทธิ์บัญชีเริ่มต้นที่พร้อมเข้าใช้งานระบบ:</span>
+                <div class="flex justify-center gap-2 mt-2 text-[9px] text-rose-200/80 font-mono">
+                    <span class="bg-white/5 px-2 py-1 rounded">admin / admin1234</span>
+                    <span class="bg-white/5 px-2 py-1 rounded">srrt / srrt1234</span>
+                    <span class="bg-white/5 px-2 py-1 rounded">osm / osm1234</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. หน้าหลัก Main App Layout (เมื่อเชื่อมต่อสำเร็จ) -->
     <!-- ========================================== -->
     <div id="main-screen" class="hidden min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
         
@@ -121,19 +173,14 @@
                         </div>
                     </div>
 
-                    <!-- Role Configuration (RBAC) & Logout -->
+                    <!-- Role & Profile / Logout -->
                     <div class="flex items-center space-x-4">
                         <div class="text-right">
-                            <span class="text-xs text-slate-400 block">สิทธิ์ผู้ใช้งานปัจจุบัน:</span>
-                            <select id="user-role-selector" onchange="changeUserRole()" class="bg-slate-800 text-xs font-bold text-emerald-400 rounded-lg px-2 py-1 border border-slate-700 focus:outline-none">
-                                <option value="ADMIN">ADMIN (จัดการทั้งหมด)</option>
-                                <option value="SRRT">SRRT (เพิ่ม/แก้ไขข้อมูล)</option>
-                                <option value="OSM">อสม. (บันทึกสำรวจเท่านั้น)</option>
-                                <option value="VIEWER">VIEWER (ดูข้อมูลเท่านั้น)</option>
-                            </select>
+                            <p id="user-display-name" class="text-sm font-bold text-white">ผู้ใช้งานระบบ</p>
+                            <span id="user-role-badge" class="text-[10px] text-emerald-400 font-extrabold bg-emerald-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">ADMIN</span>
                         </div>
-                        <button onclick="disconnectSystem()" class="p-2.5 bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl transition-all" title="ตัดการเชื่อมต่อ API">
-                            <i class="fa-solid fa-power-off text-sm"></i>
+                        <button onclick="handleLogout()" class="p-2.5 bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl transition-all" title="ออกจากระบบ">
+                            <i class="fa-solid fa-right-from-bracket text-sm"></i>
                         </button>
                     </div>
                 </div>
@@ -176,7 +223,7 @@
             </div>
 
             <!-- ============================== -->
-            <!-- 2.1 Tab: Dashboard             -->
+            <!-- 3.1 Tab: Dashboard             -->
             <!-- ============================== -->
             <section id="content-dashboard" class="space-y-6">
                 <!-- Headline Card & Quick Actions -->
@@ -300,7 +347,7 @@
             </section>
 
             <!-- ============================== -->
-            <!-- 2.2 Tab: GIS Map               -->
+            <!-- 3.2 Tab: GIS Map               -->
             <!-- ============================== -->
             <section id="content-gis" class="hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -380,7 +427,7 @@
             </section>
 
             <!-- ============================== -->
-            <!-- 2.3 Tab: Patients (ผู้ป่วย)     -->
+            <!-- 3.3 Tab: Patients (ผู้ป่วย)     -->
             <!-- ============================== -->
             <section id="content-patients" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -428,7 +475,7 @@
             </section>
 
             <!-- ============================== -->
-            <!-- 2.4 Tab: Surveys (สำรวจลูกน้ำ)   -->
+            <!-- 3.4 Tab: Surveys (สำรวจลูกน้ำ)   -->
             <!-- ============================== -->
             <section id="content-surveys" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -469,13 +516,13 @@
             </section>
 
             <!-- ============================== -->
-            <!-- 2.5 Tab: Fogging (พ่นเคมีกำจัดยุง)-->
+            <!-- 3.5 Tab: Fogging (พ่นเคมีกำจัดยุง)-->
             <!-- ============================== -->
             <section id="content-fogging" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                         <div>
-                            <h2 class="text-lg font-bold text-slate-900">บันทึกประวัติการฉีดพ่นเคและสารกำจัดตัวยุงลายแก่</h2>
+                            <h2 class="text-lg font-bold text-slate-900">บันทึกประวัติการฉีดพ่นเคมีและสารกำจัดตัวยุงลายแก่</h2>
                             <p class="text-xs text-slate-500">บันทึกการส่งหน่วยงานตอบโต้ภัยเร่งด่วนเพื่อพ่นละอองเคมีรอบบ้านผู้ป่วยไข้เลือดออก</p>
                         </div>
                         <div class="flex space-x-2 w-full sm:w-auto">
@@ -509,7 +556,7 @@
             </section>
 
             <!-- ============================== -->
-            <!-- 2.6 Tab: Settings (ตั้งค่าระบบ)-->
+            <!-- 3.6 Tab: Settings (ตั้งค่าระบบ)-->
             <!-- ============================== -->
             <section id="content-settings" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 max-w-2xl mx-auto">
@@ -567,7 +614,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 3. Modal Forms & Utilities                 -->
+    <!-- 4. Modal Forms & Utilities                 -->
     <!-- ========================================== -->
 
     <!-- Modal: Patient Form -->
@@ -750,14 +797,18 @@
 
 
     <!-- ========================================== -->
-    <!-- 4. MAIN SYSTEM JAVASCRIPT CONTROLLER       -->
+    <!-- 5. MAIN SYSTEM JAVASCRIPT CONTROLLER       -->
     <!-- ========================================== -->
     <script>
-        let apiEndpoint = localStorage.getItem('dengue_api_url') || "";
+        // *** 1. ฝัง URL ของ Google Apps Script API ตรงนี้ได้เลย ***
+        const HARDCODED_API_URL = "https://script.google.com/macros/s/AKfycbyR6S2C9XvYVzQ26GkO_6KqY742L_B1Z_Example/exec"; // กรุณาใส่ URL เว็บแอปของคุณที่นี่
+
+        let apiEndpoint = HARDCODED_API_URL.includes("Example") ? (localStorage.getItem('dengue_api_url') || "") : HARDCODED_API_URL;
         let patients = [];
         let surveys = [];
         let foggings = [];
-        let currentRole = localStorage.getItem('dengue_user_role') || "ADMIN";
+        let currentRole = localStorage.getItem('dengue_user_role') || "VIEWER";
+        let currentUserName = localStorage.getItem('dengue_user_name') || "ผู้เข้าชมทั่วไป";
         
         let mapInstance = null;
         let mapMarkers = [];
@@ -781,18 +832,120 @@
             });
             return 'HN' + String(maxNum + 1).padStart(3, '0');
         }
-        // ------------------------------------------------
 
         window.onload = function() {
-            document.getElementById('user-role-selector').value = currentRole;
             initAppThemeAndConnection();
         }
 
-        function changeUserRole() {
-            currentRole = document.getElementById('user-role-selector').value;
-            localStorage.setItem('dengue_user_role', currentRole);
+        function initAppThemeAndConnection() {
+            // ซ่อนหน้าจอทั้งหมดก่อนเพื่อความถูกต้อง
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.add('hidden');
+
+            if (!apiEndpoint) {
+                // หากยังไม่มี API URL ให้เข้าหน้าตั้งค่าดั้งเดิม
+                document.getElementById('setup-screen').classList.remove('hidden');
+            } else {
+                // หากเซ็ต API เรียบร้อย ให้ไปที่ระบบล็อกอินก่อนเข้าใช้งานเสมอ
+                const isLoggedIn = localStorage.getItem('dengue_logged_in') === 'true';
+                if (isLoggedIn) {
+                    showMainApp();
+                } else {
+                    document.getElementById('login-screen').classList.remove('hidden');
+                }
+            }
+        }
+
+        // ระบบตรวจสอบรหัสผ่านเบื้องต้นและซิงค์สิทธิ์การเข้าถึงข้อมูลตามมาตรฐาน (Offline-Ready)
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('login-username').value.trim().toLowerCase();
+            const pass = document.getElementById('login-password').value;
+
+            Swal.fire({
+                title: 'กำลังยืนยันตัวตน...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            // บัญชีเริ่มต้นแบบจำลอง (จะสลับสิทธิ์การกรอก/ลบ และพรางข้อมูล PDPA อัตโนมัติ)
+            let loggedUser = null;
+            if (user === 'admin' && pass === 'admin1234') {
+                loggedUser = { name: "ผู้ดูแลระบบควบคุมโรค", role: "ADMIN" };
+            } else if (user === 'srrt' && pass === 'srrt1234') {
+                loggedUser = { name: "เจ้าหน้าที่สอบสวนโรค SRRT", role: "SRRT" };
+            } else if (user === 'osm' && pass === 'osm1234') {
+                loggedUser = { name: "อสม. ประจำหมู่บ้าน", role: "OSM" };
+            }
+
+            if (loggedUser) {
+                localStorage.setItem('dengue_logged_in', 'true');
+                localStorage.setItem('dengue_user_role', loggedUser.role);
+                localStorage.setItem('dengue_user_name', loggedUser.name);
+                
+                currentRole = loggedUser.role;
+                currentUserName = loggedUser.name;
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ยินดีต้อนรับเข้าสู่ระบบ',
+                    text: `ล็อกอินในฐานะ ${loggedUser.name} สำเร็จ`,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    document.getElementById('login-screen').classList.add('hidden');
+                    showMainApp();
+                });
+            } else {
+                Swal.fire('ข้อผิดพลาด', 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง', 'error');
+            }
+        }
+
+        function handleLogout() {
+            Swal.fire({
+                title: 'ต้องการออกจากระบบความปลอดภัย?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#DC2626',
+                cancelButtonColor: '#64748B',
+                confirmButtonText: 'ออกจากระบบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('dengue_logged_in');
+                    localStorage.removeItem('dengue_user_role');
+                    localStorage.removeItem('dengue_user_name');
+                    initAppThemeAndConnection();
+                }
+            });
+        }
+
+        function showMainApp() {
+            document.getElementById('main-screen').classList.remove('hidden');
+            
+            // แสดงสถานะข้อมูลสิทธิ์ผู้ใช้งานบน Header
+            document.getElementById('user-display-name').innerText = currentUserName;
+            const badge = document.getElementById('user-role-badge');
+            badge.innerText = currentRole;
+            
+            if (currentRole === 'ADMIN') {
+                badge.className = "text-[10px] text-red-400 font-extrabold bg-red-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider";
+            } else if (currentRole === 'SRRT') {
+                badge.className = "text-[10px] text-indigo-400 font-extrabold bg-indigo-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider";
+            } else {
+                badge.className = "text-[10px] text-emerald-400 font-extrabold bg-emerald-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider";
+            }
+
+            document.getElementById('setting-api-url').value = apiEndpoint;
+            document.getElementById('setting-org-input').value = localStorage.getItem('dengue_org_name') || "รพ.สต.โนนทองอินทร์";
+            document.getElementById('setting-province').value = localStorage.getItem('dengue_province') || "อุดรธานี";
+            document.getElementById('setting-district').value = localStorage.getItem('dengue_district') || "กู่แก้ว";
+            document.getElementById('setting-subdistrict').value = localStorage.getItem('dengue_subdistrict') || "โนนทองอินทร์";
+            
+            applySettingsText();
             applyRolePermissions();
-            showToast(`เปลี่ยนสิทธิ์ใช้งานเป็น ${currentRole}`, 'info');
+            fetchDashboardData();
         }
 
         // ระบบควบคุมสิทธิ์การเขียนลบแก้ไขข้อมูล (RBAC)
@@ -810,26 +963,6 @@
             renderPatientTable();
             renderSurveyTable();
             renderFoggingTable();
-        }
-
-        function initAppThemeAndConnection() {
-            if (!apiEndpoint) {
-                document.getElementById('setup-screen').classList.remove('hidden');
-                document.getElementById('main-screen').classList.add('hidden');
-            } else {
-                document.getElementById('setup-screen').classList.add('hidden');
-                document.getElementById('main-screen').classList.remove('hidden');
-                document.getElementById('setting-api-url').value = apiEndpoint;
-                
-                document.getElementById('setting-org-input').value = localStorage.getItem('dengue_org_name') || "รพ.สต.โนนทองอินทร์";
-                document.getElementById('setting-province').value = localStorage.getItem('dengue_province') || "อุดรธานี";
-                document.getElementById('setting-district').value = localStorage.getItem('dengue_district') || "กู่แก้ว";
-                document.getElementById('setting-subdistrict').value = localStorage.getItem('dengue_subdistrict') || "โนนทองอินทร์";
-                
-                applySettingsText();
-                applyRolePermissions();
-                fetchDashboardData();
-            }
         }
 
         async function setupSystemConnection() {
@@ -860,7 +993,7 @@
                         icon: 'success',
                         title: 'ตั้งค่าระบบสำเร็จ!',
                         text: 'โครงสร้างฐานข้อมูลและชีตตัวอย่างพร้อมใช้งานบน Google Sheets แล้ว',
-                        confirmButtonText: 'เข้าสู่ Dashboard'
+                        confirmButtonText: 'เข้าสู่หน้าจอลงชื่อเข้าใช้'
                     }).then(() => {
                         initAppThemeAndConnection();
                     });
@@ -911,7 +1044,7 @@
         function disconnectSystem() {
             Swal.fire({
                 title: 'ต้องการตัดการเชื่อมต่อระบบ?',
-                text: "ระบบจะล้างค่า API URL ของเซสชันปัจจุบัน",
+                text: "ระบบจะล้างค่า API URL ของเซสชันปัจจุบันทั้งหมดเพื่อรีเซ็ตใหม่",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#DC2626',
@@ -921,6 +1054,9 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     localStorage.removeItem('dengue_api_url');
+                    localStorage.removeItem('dengue_logged_in');
+                    localStorage.removeItem('dengue_user_role');
+                    localStorage.removeItem('dengue_user_name');
                     apiEndpoint = "";
                     initAppThemeAndConnection();
                 }
@@ -1328,9 +1464,7 @@
             const show150 = document.getElementById('chk-radius-150').checked;
             const show200 = document.getElementById('chk-radius-200').checked;
 
-            // ตรวจสอบการเปิด-ปิด รัศมีเฉพาะผู้ป่วยที่ถูกแสดงผลอยู่ในแผนที่ ณ ขณะนั้นเท่านั้น
             mapCircles.forEach(circle => {
-                // ค้นหาว่า Marker ผู้ป่วยที่ผูกกับ Circle วงนี้ กำลังแสดงอยู่บนแผนที่หรือไม่
                 const associatedPatientMarker = mapMarkers.find(m => m.dataType === 'patient' && m.hnVal === circle.hnVal);
                 const isPatientVisible = associatedPatientMarker && mapInstance.hasLayer(associatedPatientMarker);
 
@@ -1345,7 +1479,6 @@
                         show200 ? circle.addTo(mapInstance) : mapInstance.removeLayer(circle);
                     }
                 } else {
-                    // หากผู้ป่วยถูกซ่อนอยู่ ก็ต้องซ่อนวงกลมรัศมีของวงนั้นๆ ด้วย
                     mapInstance.removeLayer(circle);
                 }
             });
@@ -1380,10 +1513,8 @@
                 }
             });
 
-            // ปรับปรุงการ ซ่อน/แสดง รัศมีควบคุมโรค (Circles) ให้สัมพันธ์กับตัวผู้ป่วยที่ถูกค้นหา
             toggleRadiusCircles();
 
-            // จัดการซูมแผนที่ให้อยู่ในขอบเขตของหมุดที่ค้นหาเจอ (โดยไม่ขโมย Focus จากช่องพิมพ์)
             if (query && hasVisibleMarkers) {
                 mapInstance.fitBounds(bounds, { maxZoom: 17, animate: true });
             }
@@ -1401,7 +1532,7 @@
                             icon: L.divIcon({
                                 className: 'current-pos-marker',
                                 html: `<div class="w-4 h-4 bg-blue-500 border-2 border-white rounded-full animate-ping"></div>`,
-                                Size: [16, 16]
+                                iconSize: [16, 16]
                             })
                         }).addTo(mapInstance).bindPopup("<b>คุณอยู่ที่นี่</b>").openPopup();
                     }
@@ -1424,7 +1555,7 @@
         }
 
         // ==============================================
-        // 5. C.R.U.D. หน้าผู้ป่วย (Patient Actions)
+        // 8. C.R.U.D. หน้าผู้ป่วย (Patient Actions)
         // ==============================================
         function renderPatientTable() {
             const tbody = document.getElementById('patient-table-body');
@@ -1538,7 +1669,7 @@
                 const action = index === "" ? "add_patient" : "edit_patient";
                 const response = await fetch(`${apiEndpoint}?action=${action}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(payload)
                 });
                 const res = await response.json();
@@ -1553,7 +1684,6 @@
             } catch (error) {
                 console.error(error);
                 Swal.fire('เครือข่ายขัดข้อง', 'ระบบได้เก็บบันทึกสำรองข้อมูลชั่วคราวในอุปกรณ์แล้ว', 'warning');
-                // เพิ่มเข้าคลังชั่วคราวชั่วครู่
                 if(index === "") {
                     patients.push(payload);
                 } else {
@@ -1582,7 +1712,7 @@
                     try {
                         const response = await fetch(`${apiEndpoint}?action=delete_patient`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                            headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify({ hn: hn })
                         });
                         const res = await response.json();
@@ -1601,7 +1731,7 @@
 
 
         // ==============================================
-        // 6. C.R.U.D. สำรวจลูกน้ำ (Survey Actions)
+        // 9. C.R.U.D. สำรวจลูกน้ำ (Survey Actions)
         // ==============================================
         function renderSurveyTable() {
             const tbody = document.getElementById('survey-table-body');
@@ -1693,7 +1823,7 @@
                 const action = index === "" ? "add_survey" : "edit_survey";
                 const response = await fetch(`${apiEndpoint}?action=${action}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(payload)
                 });
                 const res = await response.json();
@@ -1735,7 +1865,7 @@
                     try {
                         const response = await fetch(`${apiEndpoint}?action=delete_survey`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                            headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify({ address: item.address, owner: item.owner })
                         });
                         const res = await response.json();
@@ -1754,7 +1884,7 @@
 
 
         // ==============================================
-        // 7. C.R.U.D. บันทึกงานพ่นควบคุมโรค (Fogging Actions)
+        // 10. C.R.U.D. บันทึกงานพ่นควบคุมโรค (Fogging Actions)
         // ==============================================
         function updatePatientSelects() {
             const select = document.getElementById('f-patient');
@@ -1833,7 +1963,7 @@
             try {
                 const response = await fetch(`${apiEndpoint}?action=add_fogging`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(payload)
                 });
                 const res = await response.json();
@@ -1870,7 +2000,7 @@
                     try {
                         const response = await fetch(`${apiEndpoint}?action=delete_fogging`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' }, // ปรับเพื่อหลีกเลี่ยง CORS preflight OPTIONS
+                            headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify({ patient_id: item.patient_id, timestamp: item.timestamp })
                         });
                         const res = await response.json();
