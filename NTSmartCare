@@ -351,7 +351,7 @@
         // --- การตั้งค่าระบบ (Config) ---
         // ** สำคัญ: หากสร้าง GAS แล้ว ให้นำ Web App URL มาใส่ที่ตัวแปรนี้ **
         // ถ้าปล่อยว่างไว้ ระบบจะใช้ LocalStorage เพื่อจำลองการทำงานบนหน้าเว็บนี้ให้แทน
-        const GAS_WEBAPP_URL = ""; 
+        const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzyXvJNcDrmJmRbvilaXPSfYc71404pUtrdpCxHJAh_v-nEBf0_sg2ggM6LBQepslTWuA/exec"; 
         
         let map;
         let markers = [];
