@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NT SMART CARE - ระบบรับแจ้งเหตุและดูแลความปลอดภัย</title>
+    
+    <!-- PWA Setup -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1e40af">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/1e40af/ffffff?text=SC">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SMART CARE">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Prompt สำหรับภาษาไทย -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Google Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    
+    <!-- SweetAlert2 (แทน alert) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Google Maps API -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1xmTQ_hd4n-FPyqIiUqPhAElgMRdYfUo&callback=initMap"></script>
+
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Map Container */
+        #map { height: 500px; width: 100%; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+
+        /* Drag and Drop Box */
+        .drop-zone { border: 2px dashed #9ca3af; transition: all 0.3s ease; }
+        .drop-zone.dragover { border-color: #3b82f6; background-color: #eff6ff; }
+        
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6;
+            border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800 antialiased h-screen flex flex-col">
+
+    <nav class="bg-blue-800 text-white shadow-lg z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <span class="material-symbols-outlined text-3xl text-yellow-400">shield_person</span>
+                    <div>
+                        <h1 class="font-bold text-xl leading-none">NT SMART CARE</h1>
+                        <span class="text-xs text-blue-200">ระบบรับแจ้งเบาะแสและขอความช่วยเหลือ</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="nav-form" onclick="switchTab('form')" class="px-4 py-2 rounded-md bg-blue-700 hover:bg-blue-600 transition flex items-center space-x-1 font-medium">
+                        <span class="material-symbols-outlined text-sm">report_problem</span>
+                        <span class="hidden sm:inline">แจ้งข้อมูล</span>
+                    </button>
+                    <button id="nav-dashboard" onclick="switchTab('dashboard')" class="px-4 py-2 rounded-md hover:bg-blue-700 transition flex items-center space-x-1 font-medium text-blue-100">
+                        <span class="material-symbols-outlined text-sm">admin_panel_settings</span>
+                        <span class="hidden sm:inline">สำหรับเจ้าหน้าที่</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="flex-grow overflow-y-auto p-4 sm:p-6 lg:p-8">
+        
+        <div id="view-form" class="max-w-3xl mx-auto block pb-10">
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 relative overflow-hidden">
+                <!-- Header Decorative -->
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-yellow-400 to-red-500"></div>
+                
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-blue-600">edit_document</span>
+                            แบบฟอร์มแจ้งข้อมูล
+                        </h2>
+                        <p class="text-gray-500 text-sm mt-1">ข้อมูลของคุณจะถูกเก็บเป็นความลับ (ไม่เปิดเผยตัวตนผู้แจ้ง)</p>
+                    </div>
+                    <button onclick="sharePage()" class="text-gray-400 hover:text-blue-600 transition" title="แชร์หน้าแจ้งเรื่อง">
+                        <span class="material-symbols-outlined text-2xl">qr_code</span>
+                    </button>
+                </div>
+
+                <form id="reportForm" class="space-y-8">
+                    
+                    <!-- Section 1: ข้อมูลพื้นที่ -->
+                    <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined">location_on</span> 📍 ข้อมูลพื้นที่
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">บ้านเลขที่ (ถ้าทราบ)</label>
+                                <input type="text" id="houseNo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">หมู่ที่</label>
+                                <input type="text" id="moo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อหมู่บ้าน / ชุมชน</label>
+                                <input type="text" id="village" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ตำบล <span class="text-red-500">*</span></label>
+                                <input type="text" id="tambon" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">อำเภอ <span class="text-red-500">*</span></label>
+                                <input type="text" id="amphoe" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">จังหวัด <span class="text-red-500">*</span></label>
+                                <input type="text" id="province" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 rounded-xl p-5 border border-blue-100">
+                        <h3 class="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined">person_search</span> 👤 ข้อมูลบุคคลเป้าหมาย
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อเล่น (ถ้าทราบ)</label>
+                                <input type="text" id="nickname" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล (ถ้าทราบ)</label>
+                                <input type="text" id="fullName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">อายุโดยประมาณ</label>
+                                <input type="number" id="age" placeholder="เช่น 35" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">เพศ</label>
+                                <select id="gender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                    <option value="" disabled selected>- เลือกเพศ -</option>
+                                    <option value="ชาย">ชาย</option>
+                                    <option value="หญิง">หญิง</option>
+                                    <option value="ไม่ระบุ">ไม่ระบุ</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรติดต่อผู้เกี่ยวข้อง (ถ้ามี)</label>
+                                <input type="tel" id="phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-red-50 rounded-xl p-5 border border-red-100">
+                        <h3 class="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined">assignment_late</span> รายละเอียดเหตุการณ์
+                        </h3>
+                        <div class="grid grid-cols-1 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ประเภทรายงาน <span class="text-red-500">*</span></label>
+                                <select id="reportType" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none bg-white">
+                                    <option value="" disabled selected>- เลือกประเภท -</option>
+                                    <option value="แจ้งเบาะแส">แจ้งเบาะแส</option>
+                                    <option value="ขอความช่วยเหลือ">ขอความช่วยเหลือ</option>
+                                    <option value="พฤติกรรมเสี่ยง">พฤติกรรมเสี่ยง</option>
+                                    <option value="อื่นๆ">อื่นๆ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">รายละเอียด / พฤติกรรมที่พบเห็น <span class="text-red-500">*</span></label>
+                                <textarea id="details" rows="4" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none resize-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ระดับความเร่งด่วน <span class="text-red-500">*</span></label>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                                    <label class="relative flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-green-50 transition">
+                                        <input type="radio" name="urgency" value="ปกติ" required class="w-4 h-4 text-green-600 focus:ring-green-500 border-gray-300">
+                                        <span class="ml-2 text-sm font-medium text-gray-700">ปกติ (เฝ้าระวัง)</span>
+                                    </label>
+                                    <label class="relative flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-yellow-50 transition">
+                                        <input type="radio" name="urgency" value="ปานกลาง" class="w-4 h-4 text-yellow-500 focus:ring-yellow-500 border-gray-300">
+                                        <span class="ml-2 text-sm font-medium text-gray-700">ปานกลาง (ควรตรวจสอบ)</span>
+                                    </label>
+                                    <label class="relative flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-red-50 transition">
+                                        <input type="radio" name="urgency" value="สูง" class="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300">
+                                        <span class="ml-2 text-sm font-medium text-gray-700">สูง (เร่งด่วน/อันตราย)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined">add_a_photo</span> 📸 ข้อมูลเพิ่มเติม
+                        </h3>
+                        
+                        <!-- พิกัด GPS -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">พิกัดตำแหน่ง (GPS)</label>
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" id="gps-display" readonly placeholder="ยังไม่ได้ดึงพิกัด" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-500">
+                                <button type="button" onclick="getLocation()" class="flex-shrink-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-1 shadow-sm">
+                                    <span class="material-symbols-outlined text-sm">my_location</span> ตำแหน่งปัจจุบัน
+                                </button>
+                            </div>
+                            <input type="hidden" id="lat"><input type="hidden" id="lng">
+                            <p class="text-xs text-gray-500">อนุญาตให้ระบบเข้าถึงตำแหน่งของคุณเพื่อให้เจ้าหน้าที่เข้าช่วยเหลือได้แม่นยำขึ้น</p>
+                        </div>
+
+                        <!-- อัปโหลดภาพ -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">แนบรูปภาพ (ถ้ามี)</label>
+                            <div id="dropZone" class="drop-zone w-full flex flex-col items-center justify-center p-6 bg-white rounded-xl cursor-pointer">
+                                <span class="material-symbols-outlined text-4xl text-gray-400 mb-2">cloud_upload</span>
+                                <p class="text-sm font-medium text-gray-600 text-center">คลิกเพื่ออัปโหลด หรือลากไฟล์ภาพมาวางที่นี่</p>
+                                <p class="text-xs text-gray-400 mt-1">(รองรับ JPG, PNG ขนาดไม่เกิน 5MB)</p>
+                                <input type="file" id="fileInput" accept="image/jpeg, image/png" class="hidden">
+                            </div>
+                            <!-- Preview Box -->
+                            <div id="imagePreviewContainer" class="hidden mt-4 relative w-full sm:w-1/2">
+                                <img id="imagePreview" src="" alt="Preview" class="w-full rounded-lg shadow-sm border">
+                                <button type="button" onclick="removeImage()" class="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-md">
+                                    <span class="material-symbols-outlined text-sm block">close</span>
+                                </button>
+                            </div>
+                            <input type="hidden" id="imageBase64">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+                        <button type="button" onclick="clearForm()" class="w-full sm:w-auto px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition flex justify-center items-center gap-2">
+                            <span class="material-symbols-outlined">delete_outline</span> ล้างข้อมูล
+                        </button>
+                        <button type="submit" id="submitBtn" class="w-full flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-md font-semibold transition flex justify-center items-center gap-2">
+                            <span class="material-symbols-outlined" id="submitIcon">send</span> 
+                            <span id="submitText">ส่งข้อมูล</span>
+                            <div id="submitLoader" class="loader hidden"></div>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <div id="view-dashboard" class="max-w-7xl mx-auto hidden pb-10">
+            <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-blue-800">dashboard</span>
+                        ศูนย์ควบคุมและสั่งการ (Admin Dashboard)
+                    </h2>
+                    <p class="text-gray-500 text-sm mt-1">ติดตามสถานการณ์และจัดการข้อร้องเรียนในพื้นที่</p>
+                </div>
+                <button onclick="fetchData()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2 shadow-sm transition">
+                    <span class="material-symbols-outlined text-sm">refresh</span> รีเฟรชข้อมูล
+                </button>
+            </div>
+
+            <!-- Stats Widgets -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between border-l-4 border-l-blue-500">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">เคสทั้งหมด</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-total">0</p>
+                    </div>
+                    <div class="p-3 bg-blue-50 rounded-full text-blue-600"><span class="material-symbols-outlined">summarize</span></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between border-l-4 border-l-red-500">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">เร่งด่วน/เสี่ยงอันตราย</p>
+                        <p class="text-2xl font-bold text-red-600" id="stat-high">0</p>
+                    </div>
+                    <div class="p-3 bg-red-50 rounded-full text-red-600"><span class="material-symbols-outlined">warning</span></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between border-l-4 border-l-yellow-500">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">แจ้งเบาะแส</p>
+                        <p class="text-2xl font-bold text-yellow-600" id="stat-clue">0</p>
+                    </div>
+                    <div class="p-3 bg-yellow-50 rounded-full text-yellow-600"><span class="material-symbols-outlined">policy</span></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between border-l-4 border-l-green-500">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">ขอความช่วยเหลือ</p>
+                        <p class="text-2xl font-bold text-green-600" id="stat-help">0</p>
+                    </div>
+                    <div class="p-3 bg-green-50 rounded-full text-green-600"><span class="material-symbols-outlined">support</span></div>
+                </div>
+            </div>
+
+            <!-- Map Section -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="material-symbols-outlined">map</span> แผนที่แสดงจุดเกิดเหตุ
+                </h3>
+                <div id="map"></div>
+                <p class="text-xs text-gray-500 mt-2">* คลิดที่หมุดเพื่อดูรายละเอียดเพิ่มเติมของแต่ละเคส</p>
+            </div>
+
+            <!-- Data Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span class="material-symbols-outlined">list_alt</span> รายการแจ้งข้อมูลล่าสุด
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 text-sm">
+                                <th class="p-4 py-3 font-medium">วันที่-เวลา</th>
+                                <th class="p-4 py-3 font-medium">ประเภท</th>
+                                <th class="p-4 py-3 font-medium">พื้นที่ (ตำบล/อำเภอ)</th>
+                                <th class="p-4 py-3 font-medium">ความเร่งด่วน</th>
+                                <th class="p-4 py-3 font-medium text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="text-sm divide-y divide-gray-100">
+                            <!-- Table rows will be generated here -->
+                            <tr><td colspan="5" class="p-8 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- การตั้งค่าระบบ (Config) ---
+        // ** สำคัญ: หากสร้าง GAS แล้ว ให้นำ Web App URL มาใส่ที่ตัวแปรนี้ **
+        // ถ้าปล่อยว่างไว้ ระบบจะใช้ LocalStorage เพื่อจำลองการทำงานบนหน้าเว็บนี้ให้แทน
+        const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzyXvJNcDrmJmRbvilaXPSfYc71404pUtrdpCxHJAh_v-nEBf0_sg2ggM6LBQepslTWuA/exec"; 
+        
+        let map;
+        let markers = [];
+        let infoWindow;
+        let dbData = []; // เก็บข้อมูลทั้งหมด
+
+        // --- ส่วนการจัดการ UI (Tab Switching) ---
+        function switchTab(tabName) {
+            const formView = document.getElementById('view-form');
+            const dashboardView = document.getElementById('view-dashboard');
+            const navForm = document.getElementById('nav-form');
+            const navDashboard = document.getElementById('nav-dashboard');
+
+            if (tabName === 'form') {
+                formView.classList.remove('hidden');
+                dashboardView.classList.add('hidden');
+                
+                navForm.classList.add('bg-blue-700', 'text-white');
+                navForm.classList.remove('text-blue-100', 'bg-transparent');
+                
+                navDashboard.classList.remove('bg-blue-700', 'text-white');
+                navDashboard.classList.add('text-blue-100', 'bg-transparent');
+            } else {
+                formView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+                
+                navDashboard.classList.add('bg-blue-700', 'text-white');
+                navDashboard.classList.remove('text-blue-100', 'bg-transparent');
+                
+                navForm.classList.remove('bg-blue-700', 'text-white');
+                navForm.classList.add('text-blue-100', 'bg-transparent');
+
+                // รีเฟรชข้อมูลเมื่อเข้าหน้า Dashboard
+                fetchData();
+            }
+        }
+
+        // --- ส่วนการแชร์ ---
+        function sharePage() {
+            Swal.fire({
+                title: 'แชร์หน้าแจ้งเรื่อง',
+                text: 'คัดลอกลิงก์ด้านล่างเพื่อส่งให้ผู้อื่น',
+                input: 'text',
+                inputValue: window.location.href,
+                showCancelButton: true,
+                confirmButtonText: 'คัดลอก',
+                cancelButtonText: 'ปิด',
+                confirmButtonColor: '#3b82f6',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    navigator.clipboard.writeText(window.location.href);
+                    Swal.fire({ icon: 'success', title: 'คัดลอกแล้ว!', timer: 1500, showConfirmButton: false });
+                }
+            });
+        }
+
+        // --- ส่วนการดึงตำแหน่ง (Geolocation) ---
+        function getLocation() {
+            const btn = document.querySelector('button[onclick="getLocation()"]');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span> กำลังค้นหา...';
+            btn.disabled = true;
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        document.getElementById('lat').value = lat;
+                        document.getElementById('lng').value = lng;
+                        document.getElementById('gps-display').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        btn.innerHTML = '<span class="material-symbols-outlined text-sm">check_circle</span> พบตำแหน่ง';
+                        btn.classList.replace('bg-blue-600', 'bg-green-600');
+                        setTimeout(() => {
+                            btn.innerHTML = originalHtml;
+                            btn.classList.replace('bg-green-600', 'bg-blue-600');
+                            btn.disabled = false;
+                        }, 3000);
+                    },
+                    (error) => {
+                        console.error(error);
+                        Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถดึงตำแหน่งปัจจุบันได้ กรุณาเปิดการเข้าถึงตำแหน่งที่ตั้ง', 'error');
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                Swal.fire('ไม่รองรับ', 'เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง', 'warning');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        }
+
+        // --- ส่วนอัปโหลดรูปภาพ (Drag & Drop + Base64) ---
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const imageBase64Input = document.getElementById('imageBase64');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        
+        fileInput.addEventListener('change', function() {
+            if (this.files.length) handleFile(this.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.type.match('image.*')) {
+                Swal.fire('ไฟล์ไม่ถูกต้อง', 'กรุณาอัปโหลดไฟล์รูปภาพ (JPG, PNG) เท่านั้น', 'error');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                Swal.fire('ขนาดไฟล์เกิน', 'รูปภาพต้องมีขนาดไม่เกิน 5MB', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64Str = e.target.result;
+                imagePreview.src = base64Str;
+                imageBase64Input.value = base64Str;
+                dropZone.classList.add('hidden');
+                imagePreviewContainer.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            fileInput.value = '';
+            imageBase64Input.value = '';
+            imagePreview.src = '';
+            imagePreviewContainer.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+        }
+
+        // --- การส่งแบบฟอร์ม (Submit Form) ---
+        function clearForm() {
+            Swal.fire({
+                title: 'ยืนยันล้างข้อมูล?',
+                text: "ข้อมูลที่คุณกรอกจะหายไปทั้งหมด",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#9ca3af',
+                confirmButtonText: 'ใช่, ล้างข้อมูล',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('reportForm').reset();
+                    removeImage();
+                    document.getElementById('lat').value = '';
+                    document.getElementById('lng').value = '';
+                    document.getElementById('gps-display').value = '';
+                }
+            });
+        }
+
+        document.getElementById('reportForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // ดึงค่า Urgency Radio
+            const urgencyRadios = document.getElementsByName('urgency');
+            let urgencyValue = '';
+            for (const radio of urgencyRadios) {
+                if (radio.checked) urgencyValue = radio.value;
+            }
+
+            const payload = {
+                id: Date.now().toString(), // สำหรับจำลองในระบบนี้
+                timestamp: new Date().toISOString(),
+                houseNo: document.getElementById('houseNo').value,
+                moo: document.getElementById('moo').value,
+                village: document.getElementById('village').value,
+                tambon: document.getElementById('tambon').value,
+                amphoe: document.getElementById('amphoe').value,
+                province: document.getElementById('province').value,
+                nickname: document.getElementById('nickname').value,
+                fullName: document.getElementById('fullName').value,
+                age: document.getElementById('age').value,
+                gender: document.getElementById('gender').value,
+                phone: document.getElementById('phone').value,
+                reportType: document.getElementById('reportType').value,
+                details: document.getElementById('details').value,
+                urgency: urgencyValue,
+                lat: document.getElementById('lat').value,
+                lng: document.getElementById('lng').value,
+                imageBase64: document.getElementById('imageBase64').value
+            };
+
+            // Loading state
+            const submitBtn = document.getElementById('submitBtn');
+            const submitIcon = document.getElementById('submitIcon');
+            const submitText = document.getElementById('submitText');
+            const submitLoader = document.getElementById('submitLoader');
+            
+            submitBtn.disabled = true;
+            submitIcon.classList.add('hidden');
+            submitText.textContent = 'กำลังส่งข้อมูล...';
+            submitLoader.classList.remove('hidden');
+
+            try {
+                if (GAS_WEBAPP_URL) {
+                    // ของจริง ส่งไป GAS
+                    const response = await fetch(GAS_WEBAPP_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if(result.status !== 'success') throw new Error(result.message);
+                } else {
+                    // จำลอง (Mock) ด้วย LocalStorage
+                    await new Promise(r => setTimeout(r, 1500)); // จำลองดีเลย์เน็ตเวิร์ก
+                    let existing = JSON.parse(localStorage.getItem('NTSmartCare_MockData') || '[]');
+                    existing.push(payload);
+                    localStorage.setItem('NTSmartCare_MockData', JSON.stringify(existing));
+                }
+
+                Swal.fire('สำเร็จ!', 'ข้อมูลของท่านถูกส่งถึงเจ้าหน้าที่เรียบร้อยแล้ว (ปกปิดตัวตน)', 'success');
+                document.getElementById('reportForm').reset();
+                removeImage();
+                document.getElementById('gps-display').value = '';
+                
+            } catch (error) {
+                console.error(error);
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถส่งข้อมูลได้: ' + error.message, 'error');
+            } finally {
+                // Restore button
+                submitBtn.disabled = false;
+                submitIcon.classList.remove('hidden');
+                submitText.textContent = 'ส่งข้อมูล';
+                submitLoader.classList.add('hidden');
+            }
+        });
+
+
+        // --- ส่วน Dashboard & แผนที่ ---
+        function initMap() {
+            // ศูนย์กลางแผนที่เริ่มต้นที่ ประเทศไทย
+            const thailandCenter = { lat: 15.8700, lng: 100.9925 };
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 6,
+                center: thailandCenter,
+                mapTypeId: 'roadmap',
+                styles: [
+                    { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] } // ซ่อนจุดสนใจรกๆ
+                ]
+            });
+            infoWindow = new google.maps.InfoWindow();
+        }
+
+        async function fetchData() {
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500 flex justify-center items-center gap-2"><div class="loader"></div> กำลังโหลดข้อมูล...</td></tr>';
+
+            try {
+                if (GAS_WEBAPP_URL) {
+                    // ของจริง ดึงจาก GAS
+                    const response = await fetch(GAS_WEBAPP_URL);
+                    const result = await response.json();
+                    dbData = result.data || [];
+                } else {
+                    // จำลอง (Mock) จาก LocalStorage
+                    dbData = JSON.parse(localStorage.getItem('NTSmartCare_MockData') || '[]');
+                    // เรียงใหม่ล่าสุดขึ้นก่อน
+                    dbData.reverse(); 
+                }
+                
+                updateDashboardUI();
+
+            } catch (error) {
+                console.error(error);
+                tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">เกิดข้อผิดพลาดในการดึงข้อมูล: ${error.message}</td></tr>`;
+            }
+        }
+
+        function updateDashboardUI() {
+            // Update Stats
+            document.getElementById('stat-total').textContent = dbData.length;
+            document.getElementById('stat-high').textContent = dbData.filter(d => d.urgency === 'สูง').length;
+            document.getElementById('stat-clue').textContent = dbData.filter(d => d.reportType === 'แจ้งเบาะแส').length;
+            document.getElementById('stat-help').textContent = dbData.filter(d => d.reportType === 'ขอความช่วยเหลือ').length;
+
+            // Clear old markers
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+
+            if (dbData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลแจ้งเตือน</td></tr>';
+                return;
+            }
+
+            const bounds = new google.maps.LatLngBounds();
+            let validCoordsCount = 0;
+
+            dbData.forEach((item, index) => {
+                // 1. เพิ่มแถวในตาราง
+                const dateObj = item.timestamp ? new Date(item.timestamp) : new Date();
+                const dateStr = dateObj.toLocaleDateString('th-TH') + ' ' + dateObj.toLocaleTimeString('th-TH').slice(0,5);
+                
+                let urgencyColor = 'bg-green-100 text-green-800';
+                if (item.urgency === 'ปานกลาง') urgencyColor = 'bg-yellow-100 text-yellow-800';
+                if (item.urgency === 'สูง') urgencyColor = 'bg-red-100 text-red-800 animate-pulse';
+
+                const locationStr = `${item.tambon || '-'} / ${item.amphoe || '-'}`;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition border-b border-gray-100 last:border-0';
+                tr.innerHTML = `
+                    <td class="p-4">${dateStr}</td>
+                    <td class="p-4 font-medium">${item.reportType || '-'}</td>
+                    <td class="p-4">${locationStr}</td>
+                    <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-semibold ${urgencyColor}">${item.urgency || '-'}</span></td>
+                    <td class="p-4 text-center">
+                        <button onclick="viewDetails(${index})" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg transition" title="ดูรายละเอียด">
+                            <span class="material-symbols-outlined text-sm block">visibility</span>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+
+                // 2. ปักหมุดลงแผนที่ (ถ้ามีพิกัด)
+                const lat = parseFloat(item.lat || item.Latitude);
+                const lng = parseFloat(item.lng || item.Longitude);
+                
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    validCoordsCount++;
+                    const pos = { lat: lat, lng: lng };
+                    
+                    // เลือกสีหมุดตามความเร่งด่วน
+                    let markerIcon = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
+                    if (item.urgency === 'ปานกลาง') markerIcon = 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
+                    if (item.urgency === 'สูง') markerIcon = 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';
+
+                    const marker = new google.maps.Marker({
+                        position: pos,
+                        map: map,
+                        title: item.reportType,
+                        icon: markerIcon
+                    });
+                    
+                    bounds.extend(pos);
+                    markers.push(marker);
+
+                    // สร้างหน้าต่างข้อมูลเมื่อคลิกหมุด
+                    const contentString = `
+                        <div class="p-2 max-w-xs font-sans">
+                            <h4 class="font-bold text-gray-800 mb-1 border-b pb-1">${item.reportType}</h4>
+                            <p class="text-sm text-gray-600 mb-1"><b>ความเร่งด่วน:</b> <span class="text-${item.urgency==='สูง'?'red':(item.urgency==='ปานกลาง'?'yellow':'green')}-600 font-semibold">${item.urgency}</span></p>
+                            <p class="text-sm text-gray-600 mb-1"><b>สถานที่:</b> ต.${item.tambon} อ.${item.amphoe} จ.${item.province}</p>
+                            <p class="text-sm text-gray-600 mb-2 truncate"><b>รายละเอียด:</b> ${item.details || item.Details || '-'}</p>
+                            <button onclick="viewDetails(${index})" class="text-xs bg-blue-600 text-white px-2 py-1 rounded w-full hover:bg-blue-700">ดูรายละเอียดฉบับเต็ม</button>
+                        </div>
+                    `;
+
+                    marker.addListener("click", () => {
+                        infoWindow.setContent(contentString);
+                        infoWindow.open(map, marker);
+                    });
+                }
+            });
+
+            // ปรับมุมกล้องให้เห็นหมุดทั้งหมด
+            if (validCoordsCount > 0 && map) {
+                if (validCoordsCount === 1) {
+                    map.setCenter(bounds.getCenter());
+                    map.setZoom(14);
+                } else {
+                    map.fitBounds(bounds);
+                }
+            }
+        }
+
+        function viewDetails(index) {
+            const data = dbData[index];
+            if(!data) return;
+
+            const dateObj = data.timestamp ? new Date(data.timestamp) : new Date();
+            const dateStr = dateObj.toLocaleDateString('th-TH') + ' ' + dateObj.toLocaleTimeString('th-TH');
+            
+            // ใช้ fallback กรณีชื่อ field จาก Mock และ GAS ต่างกันเล็กน้อย
+            const img = data.imageBase64 || data.ImageURL || '';
+            const imgHtml = img ? `<img src="${img}" class="w-full mt-3 rounded-lg border shadow-sm max-h-64 object-cover">` : '<p class="text-xs text-gray-400 mt-2 italic">ไม่มีภาพประกอบ</p>';
+
+            const lat = data.lat || data.Latitude || '';
+            const lng = data.lng || data.Longitude || '';
+            const mapLink = (lat && lng) ? `<a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" class="text-blue-600 hover:underline text-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-xs">open_in_new</span> เปิดใน Google Maps</a>` : '-';
+
+            Swal.fire({
+                title: `<div class="flex items-center gap-2 justify-center text-blue-800"><span class="material-symbols-outlined">assignment</span> ข้อมูลการแจ้งเหตุ</div>`,
+                html: `
+                    <div class="text-left text-sm space-y-3 mt-4 text-gray-700">
+                        <div class="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded">
+                            <div><b class="text-gray-500 text-xs block">ประเภท</b> ${data.reportType || '-'}</div>
+                            <div><b class="text-gray-500 text-xs block">ความเร่งด่วน</b> <span class="font-bold ${data.urgency==='สูง'?'text-red-600':''}">${data.urgency || '-'}</span></div>
+                            <div class="col-span-2"><b class="text-gray-500 text-xs block">วันเวลาที่แจ้ง</b> ${dateStr}</div>
+                        </div>
+                        
+                        <div class="border-t pt-2">
+                            <b class="text-gray-500 text-xs block mb-1">รายละเอียด/พฤติกรรม</b>
+                            <p class="bg-white p-2 border rounded whitespace-pre-wrap">${data.details || data.Details || '-'}</p>
+                        </div>
+
+                        <div class="border-t pt-2">
+                            <b class="text-gray-500 text-xs block mb-1">ข้อมูลสถานที่</b>
+                            <p>บ้านเลขที่: ${data.houseNo || '-'} หมู่: ${data.moo || '-'} หมู่บ้าน: ${data.village || '-'}</p>
+                            <p>ต.${data.tambon || '-'} อ.${data.amphoe || '-'} จ.${data.province || '-'}</p>
+                            <div class="mt-1"><b class="text-gray-500 text-xs">พิกัด:</b> ${lat}, ${lng} ${mapLink}</div>
+                        </div>
+
+                        <div class="border-t pt-2 bg-blue-50 p-2 rounded">
+                            <b class="text-gray-500 text-xs block mb-1 text-blue-800">ข้อมูลบุคคลเป้าหมาย (ถ้ามี)</b>
+                            <p>ชื่อ-สกุล: ${data.fullName || '-'} (ชื่อเล่น: ${data.nickname || '-'})</p>
+                            <p>อายุ: ${data.age || '-'} ปี | เพศ: ${data.gender || '-'} | โทร: ${data.phone || '-'}</p>
+                        </div>
+
+                        <div class="border-t pt-2 text-center">
+                            <b class="text-gray-500 text-xs block">รูปภาพประกอบ</b>
+                            ${imgHtml}
+                        </div>
+                    </div>
+                `,
+                width: 600,
+                showCloseButton: true,
+                showConfirmButton: false
+            });
+        }
+
+        // --- การตั้งค่า PWA Service Worker ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((registration) => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }, (err) => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+
+    </script>
+</body>
+</html>
