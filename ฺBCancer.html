@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบคัดกรองความเสี่ยงมะเร็งเต้านมด้วยตนเอง</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f43f5e">
+</head>
+<body class="bg-rose-50/50 font-sans text-slate-800 min-h-screen pb-12" x-data="breastApp()">
+
+  <!-- Header Bar -->
+  <header class="bg-rose-600 text-white shadow-lg sticky top-0 z-40">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🎗️</span>
+        <div>
+          <h1 class="text-base font-bold leading-tight">ระบบคัดกรองมะเร็งเต้านม</h1>
+          <p class="text-xs text-rose-100">Self Breast Cancer Assessment PWA</p>
+        </div>
+      </div>
+      <button @click="showSettings = true" class="bg-rose-700 hover:bg-rose-800 text-white p-2 rounded-xl text-xs flex items-center gap-1 transition">
+        ⚙️ <span class="hidden sm:inline">ตั้งค่า API</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto p-4 space-y-6">
+
+    <!-- Warning setup API -->
+    <template x-if="!config.gasUrl">
+      <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-2xl shadow-sm">
+        <p class="font-bold text-amber-900 text-sm">ยังไม่ได้ตั้งค่าเชื่อมต่อระบบ!</p>
+        <p class="text-xs text-amber-700 mt-1">กรุณากดปุ่ม <b>"ตั้งค่า API"</b> มุมขวาบน แล้วระบุ GAS URL และ LINE Token เพื่อเริ่มใช้งาน</p>
+      </div>
+    </template>
+
+    <!-- Assessment Form Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-rose-100 space-y-6">
+      
+      <div class="border-b border-slate-100 pb-3">
+        <h2 class="text-lg font-bold text-rose-900 flex items-center gap-2">
+          📝 แบบประเมินความเสี่ยงด้วยตนเอง
+        </h2>
+        <p class="text-xs text-slate-500">กรอกข้อมูลและประเมินอาการเพื่อรับคำแนะนำและการดูแลเบื้องต้น</p>
+      </div>
+
+      <form @submit.prevent="submitForm()" class="space-y-6">
+        
+        <!-- Part 1: Personal Info -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold text-slate-700 bg-rose-50 px-3 py-1.5 rounded-lg border-l-4 border-rose-500">
+            ส่วนที่ 1: ข้อมูลทั่วไป
+          </h3>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อ-สกุล *</label>
+              <input type="text" x-model="form.fullname" required placeholder="ระบุชื่อ-นามสกุล..." class="w-full px-3.5 py-2.5 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">อายุ (ปี) *</label>
+              <input type="number" x-model.number="form.age" required placeholder="เช่น 45" class="w-full px-3.5 py-2.5 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">หมู่ที่ / ชุมชน *</label>
+              <input type="text" x-model="form.village" required placeholder="เช่น หมู่ 3 บ้านโนนทอง" class="w-full px-3.5 py-2.5 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์ติดต่อ</label>
+              <input type="tel" x-model="form.phone" placeholder="08X-XXXXXXX" class="w-full px-3.5 py-2.5 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- Part 2: Symptoms & Risk Checklist -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold text-slate-700 bg-rose-50 px-3 py-1.5 rounded-lg border-l-4 border-rose-500">
+            ส่วนที่ 2: อาการและความผิดปกติที่ตรวจพบ
+          </h3>
+
+          <div class="space-y-3">
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-rose-50/50 cursor-pointer transition">
+              <input type="checkbox" x-model="form.lumpFound" class="mt-1 w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+              <div>
+                <span class="text-sm font-medium text-slate-800">1. คลำพบก้อนเนื้อแข็งที่เต้านม หรือบริเวณรักแร้</span>
+                <p class="text-xs text-slate-500">ไม่ว่าจะรู้สึกเจ็บหรือไม่ก็ตาม</p>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-rose-50/50 cursor-pointer transition">
+              <input type="checkbox" x-model="form.nippleChange" class="mt-1 w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+              <div>
+                <span class="text-sm font-medium text-slate-800">2. หัวนมจม/บุ๋มลง หรือมีน้ำเหลือง/เลือดไหลออกจากหัวนม</span>
+                <p class="text-xs text-slate-500">ที่ไม่เคยเป็นมาก่อน หรือเป็นข้างเดียว</p>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-rose-50/50 cursor-pointer transition">
+              <input type="checkbox" x-model="form.skinChange" class="mt-1 w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+              <div>
+                <span class="text-sm font-medium text-slate-800">3. ผิวหนังบริเวณเต้านมบุ๋ม รอยย่น ขรุขระเหมือนผิวส้ม หรือแดงอักเสบ</span>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-rose-50/50 cursor-pointer transition">
+              <input type="checkbox" x-model="form.familyHistory" class="mt-1 w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+              <div>
+                <span class="text-sm font-medium text-slate-800">4. มีประวัติญาติสายตรง (แม่, ยาย, พี่สาว/น้องสาว) เป็นมะเร็งเต้านมหรือรังไข่</span>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-rose-50/50 cursor-pointer transition">
+              <input type="checkbox" x-model="form.breastPain" class="mt-1 w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+              <div>
+                <span class="text-sm font-medium text-slate-800">5. มีอาการเจ็บคัดตึงเต้านมผิดปกติ (ตลอดเวลา ไม่สัมพันธ์กับประจำเดือน)</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Realtime Risk Evaluation Display -->
+        <div class="p-4 rounded-2xl border transition-all"
+             :class="{
+               'bg-emerald-50 border-emerald-300 text-emerald-900': calculatedRisk.level === 'ปกติ',
+               'bg-amber-50 border-amber-300 text-amber-900': calculatedRisk.level === 'เสี่ยงต่ำ',
+               'bg-rose-50 border-rose-400 text-rose-900': calculatedRisk.level === 'เสี่ยงสูง (ควรพบแพทย์)'
+             }">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl" x-text="calculatedRisk.icon"></span>
+            <div>
+              <p class="text-xs font-semibold uppercase opacity-75">ผลการประเมินเบื้องต้น</p>
+              <h4 class="text-base font-bold" x-text="calculatedRisk.level"></h4>
+            </div>
+          </div>
+          <p class="text-xs mt-2 font-medium" x-text="calculatedRisk.advice"></p>
+        </div>
+
+        <button type="submit" :disabled="loading" 
+                class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3.5 rounded-2xl shadow-md transition flex justify-center items-center gap-2 text-sm">
+          <span x-show="!loading">💾 บันทึกผลประเมิน & ส่งแจ้งเตือน LINE</span>
+          <span x-show="loading" class="animate-spin">🔄 กำลังบันทึกข้อมูล...</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- History Data Table -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-slate-800 text-base">📋 ประวัติการคัดกรองล่าสุด</h3>
+        <button @click="loadData()" class="text-xs text-rose-600 hover:text-rose-800 font-semibold flex items-center gap-1">
+          🔄 รีเฟรชข้อมูล
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 text-slate-700 font-semibold uppercase">
+            <tr>
+              <th class="p-2.5">วันที่-เวลา</th>
+              <th class="p-2.5">ชื่อ-สกุล</th>
+              <th class="p-2.5">อายุ</th>
+              <th class="p-2.5">หมู่ที่</th>
+              <th class="p-2.5">ผลประเมิน</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <template x-for="item in records" :key="item.ID">
+              <tr class="hover:bg-rose-50/30">
+                <td class="p-2.5 text-slate-400" x-text="item.Timestamp"></td>
+                <td class="p-2.5 font-bold text-slate-800" x-text="item.Fullname"></td>
+                <td class="p-2.5" x-text="item.Age"></td>
+                <td class="p-2.5" x-text="item.Village"></td>
+                <td class="p-2.5">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                        :class="{
+                          'bg-emerald-100 text-emerald-800': item.RiskLevel === 'ปกติ',
+                          'bg-amber-100 text-amber-800': item.RiskLevel === 'เสี่ยงต่ำ',
+                          'bg-rose-100 text-rose-800': item.RiskLevel.includes('เสี่ยงสูง')
+                        }" x-text="item.RiskLevel"></span>
+                </td>
+              </tr>
+            </template>
+            <template x-if="records.length === 0">
+              <tr>
+                <td colspan="5" class="p-6 text-center text-slate-400">ยังไม่มีข้อมูลการคัดกรอง</td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Config Modal Screen -->
+  <div x-show="showSettings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <h3 class="text-base font-bold text-slate-800 border-b pb-2 flex items-center gap-2">
+        ⚙️ ตั้งค่าการเชื่อมต่อ API
+      </h3>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">1. Google Apps Script Web App URL</label>
+          <input type="url" x-model="config.gasUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-rose-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">2. LINE Channel Access Token</label>
+          <input type="text" x-model="config.lineToken" placeholder="วาง LINE Bearer Token..." class="w-full px-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-rose-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">3. LINE Target ID (User ID / Group ID)</label>
+          <input type="text" x-model="config.lineTargetId" placeholder="U123456... หรือ C123456..." class="w-full px-3 py-2 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-rose-500">
+        </div>
+      </div>
+
+      <div class="pt-2 flex gap-2">
+        <button @click="saveSettings()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs transition">💾 บันทึกการตั้งค่า</button>
+        <button @click="showSettings = false" class="bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-4 rounded-xl text-xs">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function breastApp() {
+      return {
+        showSettings: false,
+        loading: false,
+        config: {
+          gasUrl: localStorage.getItem('bsc_gas_url') || '',
+          lineToken: localStorage.getItem('bsc_line_token') || '',
+          lineTargetId: localStorage.getItem('bsc_line_target_id') || ''
+        },
+        form: {
+          fullname: '',
+          age: '',
+          village: '',
+          phone: '',
+          lumpFound: false,
+          nippleChange: false,
+          skinChange: false,
+          familyHistory: false,
+          breastPain: false
+        },
+        records: [],
+
+        init() {
+          if (this.config.gasUrl) this.loadData();
+        },
+
+        // คำนวณระดับความเสี่ยง Realtime แบบการแพทย์เบื้องต้น
+        get calculatedRisk() {
+          if (this.form.lumpFound || this.form.nippleChange || this.form.skinChange) {
+            return {
+              level: 'เสี่ยงสูง (ควรพบแพทย์)',
+              icon: '🚨',
+              advice: 'พบสัญญาณเตือนความผิดปกติอย่างชัดเจน แนะนำให้พบแพทย์หรือเจ้าหน้าที่สาธารณสุขเพื่อตรวจยืนยันโดยเร็ว'
+            };
+          } else if (this.form.familyHistory || this.form.breastPain || (this.form.age >= 40)) {
+            return {
+              level: 'เสี่ยงต่ำ',
+              icon: '⚠️',
+              advice: 'มีปัจจัยเสี่ยง ควรตรวจเต้านมด้วยตนเอง (BSE) เดือนละ 1 ครั้ง และรับการตรวจโดยเจ้าหน้าที่ปีละ 1 ครั้ง'
+            };
+          } else {
+            return {
+              level: 'ปกติ',
+              icon: '✅',
+              advice: 'ไม่พบสัญญาณความผิดปกติ หมั่นตรวจเต้านมด้วยตนเองเป็นประจำทุกเดือน (หลังหมดประจำเดือน 7 วัน)'
+            };
+          }
+        },
+
+        saveSettings() {
+          localStorage.setItem('bsc_gas_url', this.config.gasUrl);
+          localStorage.setItem('bsc_line_token', this.config.lineToken);
+          localStorage.setItem('bsc_line_target_id', this.config.lineTargetId);
+          this.showSettings = false;
+          alert('บันทึกการตั้งค่าเรียบร้อยแล้ว!');
+          this.loadData();
+        },
+
+        async loadData() {
+          if (!this.config.gasUrl) return;
+          try {
+            const res = await fetch(`${this.config.gasUrl}?action=read`);
+            const json = await res.json();
+            if (json.status === 'success') {
+              this.records = json.data.reverse();
+            }
+          } catch (err) {
+            console.error('Data load error:', err);
+          }
+        },
+
+        async submitForm() {
+          if (!this.config.gasUrl) {
+            alert('กรุณาตั้งค่า GAS URL ก่อนบันทึกข้อมูล');
+            this.showSettings = true;
+            return;
+          }
+
+          this.loading = true;
+          const payload = {
+            data: {
+              ...this.form,
+              riskLevel: this.calculatedRisk.level,
+              advice: this.calculatedRisk.advice
+            },
+            lineConfig: {
+              token: this.config.lineToken,
+              targetId: this.config.lineTargetId
+            }
+          };
+
+          try {
+            await fetch(this.config.gasUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            alert('บันทึกการคัดกรองและแจ้งเตือนเข้า LINE เรียบร้อยแล้ว!');
+            
+            // Reset Form
+            this.form.fullname = '';
+            this.form.age = '';
+            this.form.phone = '';
+            this.form.lumpFound = false;
+            this.form.nippleChange = false;
+            this.form.skinChange = false;
+            this.form.familyHistory = false;
+            this.form.breastPain = false;
+
+            setTimeout(() => this.loadData(), 1500);
+          } catch (err) {
+            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+          } finally {
+            this.loading = false;
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
